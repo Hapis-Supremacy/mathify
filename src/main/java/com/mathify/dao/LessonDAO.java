@@ -70,4 +70,26 @@ public class LessonDAO {
 
         System.out.println("Lesson berhasil dihapus!");
     }
+
+    public List<Lesson> searchLesson(String keyword) {
+
+        List<Lesson> result = new ArrayList<>();
+
+        for (Lesson lesson : lessonList) {
+
+            if (lesson.getTitle()
+                    .toLowerCase()
+                    .contains(keyword.toLowerCase())) {
+
+                result.add(lesson);
+            }
+        }
+
+        return result;
+    }
+
+    public int getTotalLesson() {
+
+        return lessonList.size();
+    }
 }
