@@ -36,6 +36,7 @@ public class Question {
         this.difficulty = difficulty;
     }
 
+    // Getter Setter
     public String getQuestionId() {
         return questionId;
     }
