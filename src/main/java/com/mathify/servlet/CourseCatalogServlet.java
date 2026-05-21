@@ -4,13 +4,15 @@
  */
 package com.mathify.servlet;
 
+import com.mathify.dao.CourseDAO;
 import com.mathify.model.Course;
-import com.mathify.service.CourseService;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
 import java.util.List;
 
@@ -22,28 +24,14 @@ import java.util.List;
 public class CourseCatalogServlet extends HttpServlet {
 
     @Override
-    protected void doGet(
-            HttpServletRequest request,
-            HttpServletResponse response)
-            throws ServletException, IOException {
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 
-        CourseService service = new CourseService();
+        CourseDAO dao = new CourseDAO();
 
-        // Cek apakah ada parameter search
-        String keyword = request.getParameter("search");
-        List<Course> courseList;
-
-        if (keyword != null && !keyword.trim().isEmpty()) {
-            courseList = service.searchCourse(keyword);
-            request.setAttribute("keyword", keyword);
-        } else {
-            courseList = service.getAllCourses();
-        }
+        List<Course> courseList = dao.getAllCourses();
 
         request.setAttribute("courseList", courseList);
-        request.setAttribute("totalCourses", service.getTotalCourses());
 
-        request.getRequestDispatcher("course-catalog.jsp")
-                .forward(request, response);
+        request.getRequestDispatcher("course-catalog.jsp").forward(request, response);
     }
 }
