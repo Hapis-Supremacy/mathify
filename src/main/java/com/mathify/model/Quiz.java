@@ -11,12 +11,11 @@ public abstract class Quiz {
         this.question = arr;
     }
 
-    @Override
+
     public double getScore(ArrayList<Question> answer){
         return 1;
     }
 
-    @Override
     public boolean isPassed(ArrayList<Question> answer){
         // for (int i=0; i<question.size(); i++){
         //     if (answer.get(i) instanceof MultipleChoiceQuestion){
