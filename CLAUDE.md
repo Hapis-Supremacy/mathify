@@ -27,6 +27,8 @@ The project is a standard Maven webapp archetype. There is no dependency injecti
 
 ## Project Structure
 
+## Project Structure
+
 ```
 src/
 └── main/
@@ -37,14 +39,52 @@ src/
     │       ├── dao/             # Data Access Objects (DB queries)
     │       ├── service/         # Business logic layer
     │       └── util/            # Helpers (DB connection, etc.)
-    ├── resources/               # Config files, SQL migration scripts
+    ├── resources/               # Config files, SQL scripts
     └── webapp/
+        ├── index.jsp                                Entry point — forwards to landing.
         ├── WEB-INF/
-        │   └── web.xml          # Servlet mappings
-        ├── css/
-        ├── js/
-        └── *.jsp                # View templates
+        │   ├── web.xml                              Servlet descriptor.
+        │   ├── tags/                                Custom tag library (shared).
+        │   │   ├── layout.tag                       <m:layout> page shell.
+        │   │   ├── icon.tag                         <m:icon name="…"/> SVG icons.
+        │   │   └── sectionHeader.tag                <m:sectionHeader …/> section headers.
+        │   └── jsp/
+        │       ├── pages/                           Page-specific JSPs.
+        │       │   └── landing/
+        │       │       ├── index.jsp                Landing page composition.
+        │       │       └── sections/                Landing-only sections.
+        │       │           ├── hero.jsp
+        │       │           ├── herodevice.jsp
+        │       │           ├── skilltree.jsp
+        │       │           ├── lesson.jsp
+        │       │           ├── gamification.jsp
+        │       │           ├── curriculum.jsp
+        │       │           ├── testimonials.jsp
+        │       │           └── cta.jsp
+        │       └── shared/                          JSPs reused across pages.
+        │           ├── nav.jsp
+        │           └── footer.jsp
+        └── assets/                                  Static files served directly.
+            ├── css/
+            │   ├── base.css                         Design tokens, body, typography.
+            │   └── landing.css                      Landing-only effects (drift, dot grid).
+            └── js/
+                ├── tailwind.config.js               Tailwind CDN theme extension.
+                └── landing/
+                    └── skilltree.js                 Alpine factory for the skill tree.
 ```
+
+### Why this layout?
+
+- **Page co-location.** Everything used by one page (its sections, its
+  CSS, its JS) sits under a folder named after the page. Easy to find,
+  easy to delete.
+- **`shared/` for cross-page parts.** `nav.jsp` and `footer.jsp` are
+  visible on every page; pulling them out avoids duplication and keeps
+  page folders focused on what's unique.
+- **`WEB-INF/` for templates, `assets/` for static.** Anything under
+  `WEB-INF/` is unreachable via URL, which prevents direct access to
+  partial JSPs; assets get served directly by the container.
 
 > Note: The package structure above is the **intended** structure. The project is early-stage — help scaffold toward this layout when adding new files.
 
@@ -118,8 +158,6 @@ Always check scope before adding a new dependency. Wrong scope (especially `prov
 
 The project is in early development. At the time of writing:
 
-- `HelloServlet.java` is a placeholder servlet
 - `index.jsp` is the default landing page
-- No domain models or DAO layer exist yet
 
 When helping scaffold new features, follow the package structure defined above and suggest creating the full vertical slice (model → DAO → service → servlet → JSP).
