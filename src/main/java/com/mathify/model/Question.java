@@ -1,69 +1,23 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.mathify.model;
 
-import java.util.List;
+public interface Question {
 
-/**
- *
- * @author Akari
- */
-public abstract class Question {
-    private String questionId;
-    private String questionText;
-    private int difficulty;
-    private String explanation;
+    QuestionInfo getInfo();
 
-    public Question() {
+    QuestionType getType();
+
+    boolean evaluate(Answer answer);
+
+    // Default methods — tidak perlu di-override oleh implementasi
+    default String getId() {
+        return getInfo().id();
     }
 
-    public Question(String questionId,
-                    String questionText,
-                    List<String> options,
-                    String correctAnswer,
-                    String explanation,
-                    int difficulty) {
-
-        this.questionId = questionId;
-        this.questionText = questionText;
-        this.explanation = explanation;
-        this.difficulty = difficulty;
-    }
-  
-    public abstract boolean checkAnswer(String answer);
-
-    // Getter Setter
-    public String getQuestionId() {
-        return questionId;
+    default String getPrompt() {
+        return getInfo().prompt();
     }
 
-    public void setQuestionId(String questionId) {
-        this.questionId = questionId;
-    }
-
-    public String getQuestionText() {
-        return questionText;
-    }
-
-    public void setQuestionText(String questionText) {
-        this.questionText = questionText;
-    }
-
-    public String getExplanation() {
-        return explanation;
-    }
-
-    public void setExplanation(String explanation) {
-        this.explanation = explanation;
-    }
-
-    public int getDifficulty() {
-        return difficulty;
-    }
-
-    public void setDifficulty(int difficulty) {
-        this.difficulty = difficulty;
+    default int getPoints() {
+        return getInfo().points();
     }
 }
