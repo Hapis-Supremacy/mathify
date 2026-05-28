@@ -1,17 +1,14 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.mathify.model;
 
-/**
- *
- * @author ACER
- */
 public interface Question {
 
     QuestionInfo getInfo();
 
+    QuestionType getType();
+
+    boolean evaluate(Answer answer);
+
+    // Default methods — tidak perlu di-override oleh implementasi
     default String getId() {
         return getInfo().id();
     }
@@ -23,8 +20,4 @@ public interface Question {
     default int getPoints() {
         return getInfo().points();
     }
-
-    QuestionType getType();
-
-    boolean evaluate(String answer);
 }
