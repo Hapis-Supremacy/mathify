@@ -1,50 +1,45 @@
 package com.mathify.model;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Course {
-    private int id;
+    private String courseId;
     private String title;
     private String description;
-    private String level;
+    private String category;
+    private List<Course> prerequisite;
+    private List<Chapter> chapters;
 
     public Course() {
+        this.prerequisite = new ArrayList<>();
+        this.chapters = new ArrayList<>();
     }
 
-    public Course(int id, String title, String description, String level) {
-        this.id = id;
+    public Course(String courseId, String title, String description, String category) {
+        this.courseId = courseId;
         this.title = title;
         this.description = description;
-        this.level = level;
+        this.category = category;
+        this.prerequisite = new ArrayList<>();
+        this.chapters = new ArrayList<>();
     }
 
-    public int getId() {
-        return id;
-    }
+    public String getCourseId() { return courseId; }
+    public void setCourseId(String courseId) { this.courseId = courseId; }
 
-    public void setId(int id) {
-        this.id = id;
-    }
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
 
-    public String getTitle() {
-        return title;
-    }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 
-    public void setTitle(String title) {
-        this.title = title;
-    }
+    public String getCategory() { return category; }
+    public void setCategory(String category) { this.category = category; }
 
-    public String getDescription() {
-        return description;
-    }
+    public List<Course> getPrerequisite() { return prerequisite; }
+    public void setPrerequisite(List<Course> prerequisite) { this.prerequisite = prerequisite; }
 
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public String getLevel() {
-        return level;
-    }
-
-    public void setLevel(String level) {
-        this.level = level;
-    }
+    public List<Chapter> getChapters() { return chapters; }
+    public void setChapters(List<Chapter> chapters) { this.chapters = chapters; }
 }
