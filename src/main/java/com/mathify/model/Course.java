@@ -1,6 +1,7 @@
 package com.mathify.model;
 
 public class Course {
+
     private int id;
     private String title;
     private String description;
