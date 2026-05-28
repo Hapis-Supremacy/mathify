@@ -1,42 +1,45 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.mathify.model;
 
-/**
- *
- * @author ACER
- */
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class DragDropQuestion implements Question {
 
-    public static final String DELIMITER = ",";
-
     private final QuestionInfo info;
-    private final List<String> items;
-    private final List<String> correctOrder;
+    private final List<DragItem> draggables;
+    private final List<DropZone> dropZones;
 
-    public DragDropQuestion(QuestionInfo info, List<String> items, List<String> correctOrder) {
+    /**
+     * Pasangan benar: Map<draggableId, dropZoneId>.
+     */
+    private final Map<String, String> correctPairings;
+
+    public DragDropQuestion(
+            QuestionInfo info,
+            List<DragItem> draggables,
+            List<DropZone> dropZones,
+            Map<String, String> correctPairings) {
+
         if (info == null) {
             throw new IllegalArgumentException("info must not be null");
         }
-        if (items == null || items.isEmpty()) {
-            throw new IllegalArgumentException("items must not be empty");
+        if (draggables == null || draggables.isEmpty()) {
+            throw new IllegalArgumentException("draggables must not be empty");
         }
-        if (correctOrder == null || correctOrder.isEmpty()) {
-            throw new IllegalArgumentException("correctOrder must not be empty");
+        if (dropZones == null || dropZones.isEmpty()) {
+            throw new IllegalArgumentException("dropZones must not be empty");
         }
-        if (items.size() != correctOrder.size()) {
-            throw new IllegalArgumentException("items and correctOrder must have the same size");
+        if (correctPairings == null || correctPairings.isEmpty()) {
+            throw new IllegalArgumentException("correctPairings must not be empty");
         }
 
         this.info = info;
-        this.items = Collections.unmodifiableList(new ArrayList<>(items));
-        this.correctOrder = Collections.unmodifiableList(new ArrayList<>(correctOrder));
+        this.draggables = Collections.unmodifiableList(new ArrayList<>(draggables));
+        this.dropZones = Collections.unmodifiableList(new ArrayList<>(dropZones));
+        this.correctPairings = Collections.unmodifiableMap(new HashMap<>(correctPairings));
     }
 
     @Override
@@ -49,39 +52,33 @@ public class DragDropQuestion implements Question {
         return QuestionType.DRAG_AND_DROP;
     }
 
-    public List<String> getItems() {
-        return items;
+    public List<DragItem> getDraggables() {
+        return draggables;
     }
 
-    public List<String> getCorrectOrder() {
-        return correctOrder;
+    public List<DropZone> getDropZones() {
+        return dropZones;
     }
 
-    public String getAnswer() {
-        return String.join(DELIMITER, correctOrder);
+    public Map<String, String> getCorrectPairings() {
+        return correctPairings;
     }
 
+    /**
+     * Evaluasi jawaban student. Benar jika semua pasangan draggableId →
+     * dropZoneId sama dengan correctPairings.
+     */
     @Override
-    public boolean evaluate(String answer) {
-        if (answer == null) {
+    public boolean evaluate(Answer answer) {
+        if (!(answer instanceof Answer.DragAndDropAnswer dda)) {
             return false;
         }
-
-        String[] submitted = answer.split(DELIMITER, -1);
-        if (submitted.length != correctOrder.size()) {
-            return false;
-        }
-
-        for (int i = 0; i < correctOrder.size(); i++) {
-            if (!correctOrder.get(i).equalsIgnoreCase(submitted[i].trim())) {
-                return false;
-            }
-        }
-        return true;
+        return correctPairings.equals(dda.pairings());
     }
 
     @Override
     public String toString() {
-        return "DragDropQuestion{id='" + info.id() + "', correctOrder=" + correctOrder + '}';
+        return "DragDropQuestion{id='" + info.id() + "', draggables=" + draggables.size()
+                + ", dropZones=" + dropZones.size() + '}';
     }
 }
