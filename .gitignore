@@ -40,4 +40,7 @@ build/
 
 # Secrets
 db/password.txt
+firebase/
 .env*
+!.env.example
+/nbactions.xml
