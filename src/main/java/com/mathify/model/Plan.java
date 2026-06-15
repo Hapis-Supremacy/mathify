@@ -5,8 +5,8 @@ import java.time.LocalDate;
 /** Subscription billing cadence for a {@link Subscribable}, with its price and duration. */
 public enum Plan {
 
-    MONTHLY(150_000, 1),
-    ANNUAL(1_500_000, 12);
+    MONTHLY(120_000, 1),
+    ANNUAL(1_440_000, 12);
 
     private final int priceIdr;
     private final int durationMonths;
