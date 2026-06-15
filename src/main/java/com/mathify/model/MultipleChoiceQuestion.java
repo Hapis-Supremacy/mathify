@@ -61,6 +61,11 @@ public class MultipleChoiceQuestion implements Question {
         return options;
     }
 
+    /** Ids of the option(s) that count as correct. */
+    public Set<String> getCorrectOptionIds() {
+        return correctOptionIds;
+    }
+
     /**
      * Evaluasi jawaban student. Benar jika selectedOptionIds sama persis dengan
      * correctOptionIds.

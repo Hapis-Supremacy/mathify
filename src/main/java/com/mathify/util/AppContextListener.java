@@ -14,6 +14,13 @@ public class AppContextListener implements ServletContextListener {
     @Override
     public void contextInitialized(ServletContextEvent sce) {
         try {
+            SchemaInitializer.run();
+        } catch (Exception e) {
+            // Log but don't abort startup — app still serves static pages
+            log.error("Database schema initialization failed: {}. DB-backed pages will not work.", e.getMessage());
+        }
+
+        try {
             FirebaseService.initialize();
         } catch (Exception e) {
             // Log but don't abort startup — app still serves non-auth pages
