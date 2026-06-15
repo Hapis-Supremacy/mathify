@@ -12,6 +12,12 @@
     int    level    = (up != null) ? up.getLevel()          : 1;
     String jsName   = userName.replace("\\", "\\\\").replace("\"", "\\\"");
     String ctx      = request.getContextPath();
+
+    Boolean premiumAttr = (Boolean) request.getAttribute("premium");
+    boolean premium     = premiumAttr != null && premiumAttr;
+    Object  premPlan    = request.getAttribute("premiumPlan");
+    Object  premExpiry  = request.getAttribute("premiumExpiry");
+    String  upgrade     = request.getParameter("upgrade"); // success | pending | failed
 %>
 <!doctype html>
 <html lang="en">
@@ -72,6 +78,32 @@
          style="background: var(--ink); color: var(--paper); border: 1px solid rgba(255,255,255,0.08);">
       <span x-text="msg"></span>
     </div>
+  </div>
+
+  <%-- Server-rendered payment flash + premium strip (outside the React tree). --%>
+  <% if (upgrade != null) {
+       String flashText; String flashBg; String flashFg;
+       if ("success".equals(upgrade))      { flashText = "✓ Payment confirmed — welcome to Mathify Premium!"; flashBg = "var(--green-soft)"; flashFg = "var(--green-deep)"; }
+       else if ("pending".equals(upgrade)) { flashText = "⏳ Payment pending — premium unlocks once it settles."; flashBg = "var(--amber-soft)"; flashFg = "var(--amber-deep)"; }
+       else                                { flashText = "✕ Payment was not completed. You have not been charged."; flashBg = "var(--rose-soft)"; flashFg = "var(--rose)"; }
+  %>
+    <div style="max-width:1280px;margin:12px auto 0;padding:10px 16px;border-radius:12px;font-weight:600;font-size:14px;background:<%= flashBg %>;color:<%= flashFg %>;">
+      <%= flashText %>
+    </div>
+  <% } %>
+
+  <div style="max-width:1280px;margin:12px auto 0;padding:0 16px;">
+    <% if (premium) { %>
+      <div style="display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;background:var(--amber-soft);color:var(--amber-deep);font-weight:700;font-size:13px;">
+        ★ Premium · <%= premPlan %><% if (premExpiry != null) { %> · until <%= premExpiry %><% } %>
+      </div>
+    <% } else { %>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;">
+        <span style="color:var(--ink-3);font-size:13px;font-weight:600;">Unlock everything with Premium —</span>
+        <a href="<%= ctx %>/checkout?plan=MONTHLY" style="padding:7px 14px;border-radius:999px;background:var(--ink);color:var(--paper);font-weight:700;font-size:13px;">Monthly · Rp 150.000</a>
+        <a href="<%= ctx %>/checkout?plan=ANNUAL" style="padding:7px 14px;border-radius:999px;background:var(--amber);color:#fff;font-weight:700;font-size:13px;">Annual · Rp 1.500.000</a>
+      </div>
+    <% } %>
   </div>
 
   <div id="root"></div>
