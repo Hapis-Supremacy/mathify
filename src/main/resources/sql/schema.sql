@@ -271,6 +271,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
 );
 
 -- ============================================================================
+<<<<<<< HEAD
 -- Payments (Midtrans Snap orders) — one row per checkout attempt.
 -- order_id is the Midtrans transaction reference; status mirrors the Midtrans
 -- transaction_status. A row reaches PAID only after server-side verification
@@ -292,6 +293,8 @@ CREATE TABLE IF NOT EXISTS payments (
 CREATE INDEX IF NOT EXISTS idx_payments_uid ON payments(uid);
 
 -- ============================================================================
+=======
+>>>>>>> 8574d32c21be424f5c5ed0e42d4a44ea7ae3cd2c
 -- Sample content — one fully-populated course so the content read path
 -- (Friend 2) and the progress write path (Friend 3) have real data to work
 -- against before the admin authoring UI is in use. Idempotent via stable ids
