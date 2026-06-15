@@ -87,8 +87,8 @@ public class CheckoutServlet extends HttpServlet {
             request.setAttribute("grossAmount", grossAmount);
 
         } catch (SQLException e) {
-            log.error("Failed to persist payment for uid={} order={}", authUser.uid(), orderId, e);
-            request.setAttribute("error", "Could not start checkout. Please try again.");
+            log.error("Failed to persist payment for uid={} order={}", authUser != null ? authUser.uid() : "null", orderId, e);
+            request.setAttribute("error", "Could not start checkout: " + e.getMessage());
         } catch (Exception e) {
             log.error("Midtrans token creation failed for order={}", orderId, e);
             request.setAttribute("error", "Payment service error: " + e.getMessage());
