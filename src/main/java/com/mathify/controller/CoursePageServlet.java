@@ -16,11 +16,8 @@ public class CoursePageServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
+        // Access is enforced by AuthFilter (/course requires a student session).
         HttpSession session = req.getSession(false);
-//        if (session == null || session.getAttribute("user") == null) {
-//            resp.sendRedirect(req.getContextPath() + "/login");
-//            return;
-//        }
         User user         = (session != null) ? (User) session.getAttribute("user") : null;
         UserProgress prog = (session != null) ? (UserProgress) session.getAttribute("progress") : null;
         req.setAttribute("user", user);
