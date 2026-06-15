@@ -1,66 +1,62 @@
-# Changes Summary: Midtrans Payment Integration
+# Changes Summary: Midtrans Payment Integration (completed)
 
-This document outlines all changes made since the previous git commit to integrate **Midtrans Payment Gateway** into the Mathify application.
-
----
-
-## 1. Dependency Updates
-
-### [pom.xml](file:///d:/TUGAS%20KULIAH/4/PBO/tubes/mathify/pom.xml)
-* Added the Midtrans Java SDK dependency:
-  ```xml
-  <dependency>
-    <groupId>com.midtrans</groupId>
-    <artifactId>java-library</artifactId>
-    <version>3.2.2</version>
-  </dependency>
-  ```
-* Configured compiler plugin to ignore Lombok annotation processor errors during compile by adding `<proc>none</proc>` to `maven-compiler-plugin` configuration:
-  ```xml
-  <configuration>
-    <source>17</source>
-    <target>17</target>
-    <proc>none</proc>
-  </configuration>
-  ```
+This document describes the **finished** Midtrans payment flow. The initial PR (#43)
+wired a standalone Snap demo in production mode; this revision turns it into a secure,
+domain-integrated premium-upgrade feature.
 
 ---
 
-## 2. Docker & Environment Configuration
+## Flow overview
 
-### [compose.yaml](file:///d:/TUGAS%20KULIAH/4/PBO/tubes/mathify/compose.yaml)
-* Exposed Midtrans environment variables from host `.env` file directly to the web service container:
-  ```yaml
-  - MIDTRANS_MERCHANT_ID=${MIDTRANS_MERCHANT_ID}
-  - MIDTRANS_CLIENT_KEY=${MIDTRANS_CLIENT_KEY}
-  - MIDTRANS_SERVER_KEY=${MIDTRANS_SERVER_KEY}
-  ```
+```
+Dashboard "Upgrade" → GET /checkout?plan=MONTHLY|ANNUAL
+    → create PENDING payments row (order tied to uid + plan)
+    → Midtrans Snap token → checkout page
+    → user pays in Snap popup
+    → browser redirected to GET /payment/confirm?orderId=…
+    → server re-verifies with Midtrans (CoreApi.checkTransaction)
+    → on settlement: SubscriptionDAO.save(uid, PremiumStudent) + payments row → PAID
+    → redirect /dashboard?upgrade=success (premium reflected via Student.getPremium())
+```
 
----
-
-## 3. New Backend Controller
-
-### [NEW] [CheckoutServlet.java](file:///d:/TUGAS%20KULIAH/4/PBO/tubes/mathify/src/main/java/com/mathify/controller/CheckoutServlet.java)
-* Created a new WebServlet mapped to `/checkout` that handles transaction token generation.
-* Initializes the Midtrans SDK `Config` dynamically using the environment variables (`MIDTRANS_SERVER_KEY`, `MIDTRANS_CLIENT_KEY`).
-* Set to **Production Mode** (`.setIsProduction(true)`) using your configured live Merchant and API keys.
-* Generates a unique transaction token for a checkout amount of `Rp 150.000` via the Midtrans Snap API and forwards the client key and `snapToken` parameters to the checkout front-end.
+Premium is **never** granted from the browser callbacks — only after server-side
+verification. This works on localhost/Docker (no public webhook URL required).
 
 ---
 
-## 4. New Frontend Checkout View
+## 1. Configuration
 
-### [NEW] [index.jsp](file:///d:/TUGAS%20KULIAH/4/PBO/tubes/mathify/src/main/webapp/WEB-INF/jsp/pages/checkout/index.jsp)
-* Formatted modern UI card detailing the premium purchase with customizable styling.
-* Loads the Midtrans Snap SDK JS library directly from the live Production URL:
-  ```html
-  <script type="text/javascript"
-          src="https://app.midtrans.com/snap/snap.js"
-          data-client-key="${clientKey}"></script>
-  ```
-* Attaches an event listener to the **Proceed to Payment** button that triggers the Midtrans Snap pay overlay modal using the generated transaction token (`window.snap.pay('${snapToken}', ...)`).
-* Includes callback handlers for transaction outcomes:
-  * `onSuccess`
-  * `onPending`
-  * `onError`
-  * `onClose`
+- **`pom.xml`** — Midtrans Java SDK `com.midtrans:java-library:3.2.2`; `<proc>none</proc>`
+  on the compiler plugin to skip the SDK's transitive Lombok annotation processor.
+- **`compose.yaml` / `.env.example`** — `MIDTRANS_SERVER_KEY`, `MIDTRANS_CLIENT_KEY`,
+  `MIDTRANS_MERCHANT_ID`, and `MIDTRANS_IS_PRODUCTION` (defaults to `false` = **Sandbox**).
+
+## 2. New backend
+
+- **`util/MidtransService`** — reads env once, exposes shared `Config`, Snap + Core
+  clients, the client key, and the production flag. Sandbox by default.
+- **`controller/CheckoutServlet` (`/checkout`)** — auth-gated; maps `?plan` → price via
+  the `Plan` enum, persists a PENDING `Payment`, generates a Snap token with item +
+  customer details, forwards to the checkout page.
+- **`controller/PaymentConfirmServlet` (`/payment/confirm`)** — verifies the order with
+  Midtrans, checks ownership (uid match), grants/extends the subscription via
+  `SubscriptionDAO`, and flips the `payments` row to PAID/FAILED. Idempotent.
+- **`dao/PaymentDAO`** + **`model/Payment`** / **`model/PaymentStatus`** — the
+  `payments` table (one row per checkout attempt).
+- **`model/Plan`** — now carries price (IDR) and duration; computes expiry.
+
+## 3. Wiring
+
+- **`AuthFilter`** — `/checkout` and `/payment/*` now require a student session.
+- **`StudentDashboardServlet` + `student/dashboard.jsp`** — load the subscription,
+  show a "Premium" badge when active or Monthly/Annual upgrade buttons otherwise, plus a
+  flash banner for the `?upgrade=success|pending|failed` return.
+- **`schema.sql`** — new `payments` table (FK → `users`, indexed by uid).
+
+## 4. Security / correctness fixes vs the initial PR
+
+- Sandbox by default instead of hardcoded production with live keys.
+- Order tied to the authenticated user; ownership re-checked on confirm.
+- Server-side verification before granting premium (no trusting client callbacks).
+- Real domain integration (`SubscriptionDAO` / `PremiumStudent` / `Plan`) per `TASKS.md`.
+- Snap script URL switches between sandbox and production automatically.

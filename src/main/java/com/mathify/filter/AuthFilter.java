@@ -17,14 +17,23 @@ import java.io.IOException;
  *
  * <ul>
  *   <li>{@code /admin/*} requires an admin session (session attribute {@code admin}).</li>
+<<<<<<< HEAD
+ *   <li>{@code /dashboard}, {@code /course}, {@code /quiz}, {@code /checkout},
+ *       {@code /payment/*} require a student session (session attribute {@code authUser}).</li>
+=======
  *   <li>{@code /dashboard}, {@code /course}, {@code /quiz} require a student session
  *       (session attribute {@code authUser}).</li>
+>>>>>>> 8574d32c21be424f5c5ed0e42d4a44ea7ae3cd2c
  * </ul>
  *
  * Unauthenticated requests are redirected to {@code /login}. Public routes (landing,
  * login, register, logout, library, assets) are simply not mapped here.
  */
+<<<<<<< HEAD
+@WebFilter(urlPatterns = {"/admin/*", "/dashboard", "/course", "/quiz", "/checkout", "/payment/*"})
+=======
 @WebFilter(urlPatterns = {"/admin/*", "/dashboard", "/course", "/quiz"})
+>>>>>>> 8574d32c21be424f5c5ed0e42d4a44ea7ae3cd2c
 public class AuthFilter implements Filter {
 
     @Override
