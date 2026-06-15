@@ -20,11 +20,8 @@ public class QuizServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
+        // Access is enforced by AuthFilter (/quiz requires a student session).
         HttpSession session = req.getSession(false);
-//        if (session == null || session.getAttribute("authUser") == null) {
-//            resp.sendRedirect(req.getContextPath() + "/login");
-//            return;
-//        }
         User user         = (session != null) ? (User) session.getAttribute("user") : null;
         UserProgress prog = (session != null) ? (UserProgress) session.getAttribute("progress") : null;
         AuthUser authUser = (session != null) ? (AuthUser) session.getAttribute("authUser") : null;
