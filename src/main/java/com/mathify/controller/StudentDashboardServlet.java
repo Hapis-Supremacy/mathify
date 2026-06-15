@@ -1,9 +1,11 @@
 package com.mathify.controller;
 
 import com.mathify.dao.CourseEnrollmentDAO;
+import com.mathify.dao.SubscriptionDAO;
 import com.mathify.dao.UserAchievementDAO;
 import com.mathify.dao.UserProgressDAO;
 import com.mathify.model.AuthUser;
+import com.mathify.model.Subscribable;
 import com.mathify.model.UserProgress;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -51,6 +53,20 @@ public class StudentDashboardServlet extends HttpServlet {
             req.setAttribute("achievements", new UserAchievementDAO().findByUser(authUser.uid()));
         } catch (SQLException e) {
             log.error("Failed to load enrollments/achievements for uid={}", authUser.uid(), e);
+        }
+
+        // Reflect premium status so the dashboard can show it (or an upgrade prompt).
+        try {
+            Subscribable sub = new SubscriptionDAO().find(authUser.uid());
+            boolean premium = sub != null && sub.isActive();
+            req.setAttribute("premium", premium);
+            if (premium) {
+                req.setAttribute("premiumPlan", sub.getSubscriptionPlan());
+                req.setAttribute("premiumExpiry", sub.subscriptionExpiry());
+            }
+        } catch (SQLException e) {
+            log.error("Failed to load subscription for uid={}", authUser.uid(), e);
+            req.setAttribute("premium", Boolean.FALSE);
         }
 
         req.setAttribute("authUser", authUser);
