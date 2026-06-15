@@ -1,5 +1,7 @@
 package com.mathify.controller;
 
+import com.mathify.dao.CourseEnrollmentDAO;
+import com.mathify.dao.UserAchievementDAO;
 import com.mathify.dao.UserProgressDAO;
 import com.mathify.model.AuthUser;
 import com.mathify.model.UserProgress;
@@ -41,6 +43,14 @@ public class StudentDashboardServlet extends HttpServlet {
             log.error("Failed to load progress for uid={}", authUser.uid(), e);
             progress = (UserProgress) session.getAttribute("progress");
             if (progress == null) progress = new UserProgress(authUser.uid());
+        }
+
+        // Load the student's enrollments and earned achievements for the dashboard.
+        try {
+            req.setAttribute("enrollments", new CourseEnrollmentDAO().findByUser(authUser.uid()));
+            req.setAttribute("achievements", new UserAchievementDAO().findByUser(authUser.uid()));
+        } catch (SQLException e) {
+            log.error("Failed to load enrollments/achievements for uid={}", authUser.uid(), e);
         }
 
         req.setAttribute("authUser", authUser);

@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS user_progress (
 );
 
 CREATE TABLE IF NOT EXISTS courses (
-    id              SERIAL       PRIMARY KEY,
+    course_id       VARCHAR(128) PRIMARY KEY DEFAULT gen_random_uuid()::text,
     title           VARCHAR(255) NOT NULL,
     description     TEXT,
     track           VARCHAR(100) NOT NULL,
@@ -46,3 +46,220 @@ SELECT * FROM (VALUES
   ('Discrete Mathematics',            'Logic, sets, graphs — the toolkit behind computer science.',         'Discrete math', 5, 'amber', '∑',    32, '10h', 1580, 'new')
 ) AS v(title, description, track, level_num, color, glyph, total_lessons, estimated_hours, xp_reward, status)
 WHERE NOT EXISTS (SELECT 1 FROM courses LIMIT 1);
+
+-- ============================================================================
+-- Admins
+-- ----------------------------------------------------------------------------
+-- Backoffice users (model: Admin). Unlike `users`, admins are NOT Firebase-
+-- backed — they carry a generated UUID, a role, and a last-login timestamp.
+-- Kept in a separate table so the Firebase-keyed `users` table stays clean.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS admins (
+    admin_id     UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+    name         VARCHAR(255) NOT NULL,
+    email        VARCHAR(255) NOT NULL UNIQUE,
+    role         VARCHAR(20)  NOT NULL DEFAULT 'EDITOR'
+                              CHECK (role IN ('OWNER', 'EDITOR', 'VIEWER')),
+    last_login_at TIMESTAMPTZ,
+    created_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+-- ============================================================================
+-- Course content hierarchy
+--   courses (existing) → chapters → learning_modules → slides
+--                                 → quizzes → questions → answer payloads
+-- Authored content uses caller-supplied VARCHAR ids (matching the String ids
+-- on the domain models); `courses` keeps its existing SERIAL int id.
+-- ============================================================================
+
+-- Self-referential prerequisites for courses (Course.prerequisite).
+CREATE TABLE IF NOT EXISTS course_prerequisites (
+    course_id       VARCHAR(128) NOT NULL REFERENCES courses(course_id) ON DELETE CASCADE,
+    prerequisite_id VARCHAR(128) NOT NULL REFERENCES courses(course_id) ON DELETE CASCADE,
+    PRIMARY KEY (course_id, prerequisite_id),
+    CHECK (course_id <> prerequisite_id)
+);
+
+CREATE TABLE IF NOT EXISTS chapters (
+    chapter_id  VARCHAR(128) PRIMARY KEY,
+    course_id   VARCHAR(128) NOT NULL REFERENCES courses(course_id) ON DELETE CASCADE,
+    title       VARCHAR(255) NOT NULL,
+    description TEXT,
+    xp_reward   INT          NOT NULL DEFAULT 0,
+    order_index INT          NOT NULL DEFAULT 0,
+    created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_chapters_course ON chapters(course_id);
+
+-- Self-referential prerequisites for chapters (Chapter.prerequisite).
+CREATE TABLE IF NOT EXISTS chapter_prerequisites (
+    chapter_id      VARCHAR(128) NOT NULL REFERENCES chapters(chapter_id) ON DELETE CASCADE,
+    prerequisite_id VARCHAR(128) NOT NULL REFERENCES chapters(chapter_id) ON DELETE CASCADE,
+    PRIMARY KEY (chapter_id, prerequisite_id),
+    CHECK (chapter_id <> prerequisite_id)
+);
+
+-- Base table for every LearningModule. Subtype-specific columns live in the
+-- video_modules / slide_modules tables below, keyed 1:1 by module_id.
+CREATE TABLE IF NOT EXISTS learning_modules (
+    module_id   VARCHAR(128) PRIMARY KEY,
+    chapter_id  VARCHAR(128) NOT NULL REFERENCES chapters(chapter_id) ON DELETE CASCADE,
+    title       VARCHAR(255) NOT NULL,
+    order_index INT          NOT NULL DEFAULT 0,
+    type        VARCHAR(10)  NOT NULL CHECK (type IN ('VIDEO', 'SLIDE')),
+    created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_modules_chapter ON learning_modules(chapter_id);
+
+CREATE TABLE IF NOT EXISTS video_modules (
+    module_id        VARCHAR(128) PRIMARY KEY REFERENCES learning_modules(module_id) ON DELETE CASCADE,
+    video_url        TEXT NOT NULL,
+    duration_seconds BIGINT NOT NULL DEFAULT 0,
+    thumbnail_url    TEXT
+);
+
+CREATE TABLE IF NOT EXISTS slide_modules (
+    module_id         VARCHAR(128) PRIMARY KEY REFERENCES learning_modules(module_id) ON DELETE CASCADE,
+    seconds_per_slide INT NOT NULL DEFAULT 0
+);
+
+-- Individual slides (Slide record) within a SlideModule, ordered by slide_order.
+CREATE TABLE IF NOT EXISTS slides (
+    module_id   VARCHAR(128) NOT NULL REFERENCES slide_modules(module_id) ON DELETE CASCADE,
+    slide_order INT          NOT NULL,
+    image_url   TEXT         NOT NULL,
+    caption     TEXT,
+    PRIMARY KEY (module_id, slide_order)
+);
+
+-- ============================================================================
+-- Quizzes & questions
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS quizzes (
+    quiz_id       VARCHAR(128) PRIMARY KEY,
+    chapter_id    VARCHAR(128) NOT NULL REFERENCES chapters(chapter_id) ON DELETE CASCADE,
+    title         VARCHAR(255) NOT NULL,
+    passing_score INT          NOT NULL DEFAULT 0 CHECK (passing_score >= 0),
+    created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_quizzes_chapter ON quizzes(chapter_id);
+
+-- Base table for every Question (QuestionInfo + type discriminator).
+-- case_sensitive is only meaningful for FILL_BLANK questions.
+CREATE TABLE IF NOT EXISTS questions (
+    question_id    VARCHAR(128) PRIMARY KEY,
+    quiz_id        VARCHAR(128) NOT NULL REFERENCES quizzes(quiz_id) ON DELETE CASCADE,
+    prompt         TEXT         NOT NULL,
+    points         INT          NOT NULL DEFAULT 0 CHECK (points >= 0),
+    type           VARCHAR(20)  NOT NULL
+                                CHECK (type IN ('MULTIPLE_CHOICE', 'FILL_BLANK', 'DRAG_AND_DROP')),
+    case_sensitive BOOLEAN      NOT NULL DEFAULT FALSE,
+    order_index    INT          NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_questions_quiz ON questions(quiz_id);
+
+-- MULTIPLE_CHOICE: options plus an is_correct flag (correctOptionIds is a Set).
+CREATE TABLE IF NOT EXISTS mc_options (
+    question_id VARCHAR(128) NOT NULL REFERENCES questions(question_id) ON DELETE CASCADE,
+    option_id   VARCHAR(128) NOT NULL,
+    option_text TEXT         NOT NULL,
+    is_correct  BOOLEAN      NOT NULL DEFAULT FALSE,
+    PRIMARY KEY (question_id, option_id)
+);
+
+-- FILL_BLANK: ordered list of accepted answers, one row per blank.
+CREATE TABLE IF NOT EXISTS fill_blank_answers (
+    question_id  VARCHAR(128) NOT NULL REFERENCES questions(question_id) ON DELETE CASCADE,
+    answer_order INT          NOT NULL,
+    answer_text  TEXT         NOT NULL,
+    PRIMARY KEY (question_id, answer_order)
+);
+
+-- DRAG_AND_DROP: draggable items, drop zones, and the correct pairings between them.
+CREATE TABLE IF NOT EXISTS drag_items (
+    question_id VARCHAR(128) NOT NULL REFERENCES questions(question_id) ON DELETE CASCADE,
+    item_id     VARCHAR(128) NOT NULL,
+    label       VARCHAR(255) NOT NULL,
+    PRIMARY KEY (question_id, item_id)
+);
+
+CREATE TABLE IF NOT EXISTS drop_zones (
+    question_id VARCHAR(128) NOT NULL REFERENCES questions(question_id) ON DELETE CASCADE,
+    zone_id     VARCHAR(128) NOT NULL,
+    label       VARCHAR(255) NOT NULL,
+    PRIMARY KEY (question_id, zone_id)
+);
+
+-- Correct pairing map: each draggable maps to exactly one drop zone.
+CREATE TABLE IF NOT EXISTS drag_drop_pairings (
+    question_id VARCHAR(128) NOT NULL,
+    item_id     VARCHAR(128) NOT NULL,
+    zone_id     VARCHAR(128) NOT NULL,
+    PRIMARY KEY (question_id, item_id),
+    FOREIGN KEY (question_id, item_id) REFERENCES drag_items(question_id, item_id) ON DELETE CASCADE,
+    FOREIGN KEY (question_id, zone_id) REFERENCES drop_zones(question_id, zone_id) ON DELETE CASCADE
+);
+
+-- ============================================================================
+-- Gamification: achievement catalog + per-user awards
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS achievements (
+    achievement_id VARCHAR(128) PRIMARY KEY,
+    title          VARCHAR(255) NOT NULL,
+    category       VARCHAR(100),
+    requirement    TEXT
+);
+
+-- Which achievements a user has earned and when (UserProgress.achievements).
+CREATE TABLE IF NOT EXISTS user_achievements (
+    uid            VARCHAR(128) NOT NULL REFERENCES users(uid) ON DELETE CASCADE,
+    achievement_id VARCHAR(128) NOT NULL REFERENCES achievements(achievement_id) ON DELETE CASCADE,
+    earned_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (uid, achievement_id)
+);
+
+-- ============================================================================
+-- Per-user progress tracking
+--   (UserProgress.courseEnrollments / chapterProgress / quizAttempts)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS course_enrollments (
+    uid          VARCHAR(128) NOT NULL REFERENCES users(uid) ON DELETE CASCADE,
+    course_id    VARCHAR(128) NOT NULL REFERENCES courses(course_id) ON DELETE CASCADE,
+    enrolled_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    completed_at TIMESTAMPTZ,
+    PRIMARY KEY (uid, course_id)
+);
+
+CREATE TABLE IF NOT EXISTS chapter_progress (
+    uid                VARCHAR(128) NOT NULL REFERENCES users(uid) ON DELETE CASCADE,
+    chapter_id         VARCHAR(128) NOT NULL REFERENCES chapters(chapter_id) ON DELETE CASCADE,
+    completed_at       TIMESTAMPTZ,
+    time_spent_seconds BIGINT       NOT NULL DEFAULT 0,
+    PRIMARY KEY (uid, chapter_id)
+);
+
+-- Best attempt per (user, quiz) — mirrors UserProgress keeping the top score.
+CREATE TABLE IF NOT EXISTS quiz_attempts (
+    uid          VARCHAR(128) NOT NULL REFERENCES users(uid) ON DELETE CASCADE,
+    quiz_id      VARCHAR(128) NOT NULL REFERENCES quizzes(quiz_id) ON DELETE CASCADE,
+    score        INT          NOT NULL CHECK (score >= 0),
+    completed_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (uid, quiz_id)
+);
+
+-- ============================================================================
+-- Subscriptions (Subscribable / PremiumStudent) — one per student.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS subscriptions (
+    uid         VARCHAR(128) PRIMARY KEY REFERENCES users(uid) ON DELETE CASCADE,
+    plan        VARCHAR(20)  NOT NULL CHECK (plan IN ('MONTHLY', 'ANNUAL')),
+    expiry      DATE,
+    is_canceled BOOLEAN      NOT NULL DEFAULT FALSE,
+    created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);

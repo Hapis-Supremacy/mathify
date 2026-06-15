@@ -7,7 +7,7 @@ package com.mathify.model;
  * prerequisites) — it carries only what the UI needs to render a card.
  */
 public class CourseCardView {
-    private int    id;
+    private String id;            // course_id (UUID string) from the courses table
     private String title;
     private String description;
     private String track;
@@ -22,15 +22,15 @@ public class CourseCardView {
 
     public CourseCardView() {}
 
-    public CourseCardView(int id, String title, String description, String level) {
+    public CourseCardView(String id, String title, String description, String level) {
         this.id          = id;
         this.title       = title;
         this.description = description;
         this.level       = level;
     }
 
-    public int    getId()                    { return id; }
-    public void   setId(int id)              { this.id = id; }
+    public String getId()                    { return id; }
+    public void   setId(String id)           { this.id = id; }
 
     public String getTitle()                 { return title; }
     public void   setTitle(String t)         { this.title = t; }
