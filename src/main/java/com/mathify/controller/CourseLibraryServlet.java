@@ -55,7 +55,7 @@ public class CourseLibraryServlet extends HttpServlet {
             if (i > 0) sb.append(",");
             CourseCardView c = courses.get(i);
             sb.append("{")
-              .append("\"id\":").append(c.getId()).append(",")
+              .append("\"id\":\"").append(esc(c.getId())).append("\",")
               .append("\"title\":\"").append(esc(c.getTitle())).append("\",")
               .append("\"blurb\":\"").append(esc(c.getDescription())).append("\",")
               .append("\"track\":\"").append(esc(c.getTrack())).append("\",")
