@@ -23,6 +23,8 @@ export default defineConfig({
         courseLibrary:  'src/pages/courseLibrary/main.jsx',
         quiz:           'src/pages/quiz/main.jsx',
         course:         'src/pages/course/main.jsx',
+        courses:        'src/pages/courses/main.jsx',
+        premium:        'src/pages/premium/main.jsx',
         adminDashboard: 'src/pages/adminDashboard/main.jsx',
       },
       output: {
