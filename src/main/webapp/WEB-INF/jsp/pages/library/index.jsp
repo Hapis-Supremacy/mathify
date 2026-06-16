@@ -60,7 +60,11 @@
       level:   <%= level %>,
       ctx:     "<%= ctx %>"
     };
-    var COURSES_DATA = <%= request.getAttribute("coursesJson") != null ? request.getAttribute("coursesJson") : "[]" %>;
+    var ACTIVE_NAV    = "library";
+    var COURSES_DATA  = <%= request.getAttribute("coursesJson")     != null ? request.getAttribute("coursesJson")     : "[]"   %>;
+    var ENROLLED_IDS  = <%= request.getAttribute("enrolledIdsJson") != null ? request.getAttribute("enrolledIdsJson") : "[]"   %>;
+    var COMPLETED_IDS = <%= request.getAttribute("completedIdsJson")!= null ? request.getAttribute("completedIdsJson"): "[]"   %>;
+    var FOCUS_COURSE  = <%= request.getAttribute("focusCourseJson") != null ? request.getAttribute("focusCourseJson") : "null" %>;
   </script>
 
   <script defer src="https://unpkg.com/alpinejs@3.14.3/dist/cdn.min.js"></script>

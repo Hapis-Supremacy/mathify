@@ -28,8 +28,9 @@ const Logo = () => (
   </svg>
 );
 
+
 /* ── Nav ────────────────────────────────────────────────────────── */
-const Nav = () => {
+const Nav = ({ isDimmed }) => {
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 24);
@@ -42,6 +43,7 @@ const Nav = () => {
       position: 'sticky', top: 0, zIndex: 50,
       padding: scrolled ? '14px 0' : '22px 0',
       transition: 'padding .2s ease',
+      background: isDimmed ? 'rgba(0, 0, 0, 0.75)' : '#fbf9f4',
     }} className="bg-[#fbf9f4]">
       <div style={{ maxWidth: 1240, margin: '0 auto', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <a href="/">
@@ -57,7 +59,7 @@ const Nav = () => {
               <span style={{ fontWeight: 700, fontSize: 19, letterSpacing: '-0.01em' }}>Mathlify</span>
             </div>
         </a>
-
+            
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <a href="/register" style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>Sign in</a>
           <a href="/login" style={{
@@ -303,17 +305,12 @@ const HeroDevice = () => (
   </div>
 );
 
-function VideoModal() {
-  const [open, setOpen] = useState(false);
-
-  const openModal = () => setOpen(true);
-  const closeModal = () => setOpen(false);
-
+function VideoModal({isModalOpen, setIsModalOpen}) {
   return (
     <>
       <a
         href="#"
-        onClick={(e) => { e.preventDefault(); openModal(); }}
+        onClick={(e) => { e.preventDefault(); setIsModalOpen(true); }}
         style={{
           display: "inline-flex", alignItems: "center", gap: 8,
           padding: "16px 22px", borderRadius: 14,
@@ -331,9 +328,9 @@ function VideoModal() {
         Watch a 90s tour
       </a>
 
-      {open && (
+      {isModalOpen && (
         <div
-          onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}
+          onClick={(e) => { if (e.target === e.currentTarget) setIsModalOpen(false); }}
           style={{
             position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)",
             display: "flex", alignItems: "center", justifyContent: "center",
@@ -342,7 +339,7 @@ function VideoModal() {
         >
           <div style={{ position: "relative", width: "min(860px, 90vw)", aspectRatio: "16/9" }}>
             <button
-              onClick={closeModal}
+              onClick={() => setIsModalOpen(false)}
               style={{
                 position: "absolute", top: -40, right: 0,
                 background: "none", border: "none", cursor: "pointer",
@@ -365,7 +362,7 @@ function VideoModal() {
   );
 }
 
-const Hero = () => (
+const Hero = ({isModalOpen, setIsModalOpen}) => (
   <section style={{ position: 'relative', padding: '40px 0 80px', overflow: 'hidden' }}>
     <FloatingGlyphs />
 
@@ -397,7 +394,7 @@ const Hero = () => (
         <a href="/register" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '16px 24px', borderRadius: 14, background: 'var(--green)', color: 'white', fontSize: 16, fontWeight: 700, boxShadow: '0 2px 0 var(--green-deep), 0 12px 24px -8px rgba(31,138,91,0.5)' }}>
           Start learning free <Icon.Arrow />
         </a>
-        <VideoModal/>
+        <VideoModal isModalOpen={isModalOpen} setIsModalOpen={setIsModalOpen}/>
       </div>
 
       <p style={{ fontSize: 13, color: 'var(--ink-3)' }}>Free forever for the first 5 levels · No credit card · 4 min average lesson</p>
@@ -1040,19 +1037,23 @@ const Footer = () => (
 );
 
 /* ── App ────────────────────────────────────────────────────────── */
-const App = () => (
-  <div>
-    <Nav/>
-    <Hero/>
-    <SkillTree/>
-    <LessonAnatomy/>
-    <Gamification/>
-    <Curriculum/>
-    <Testimonials/>
-    <CTA/>
-    <Footer/>
-  </div>
-);
+const App = () => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  return (
+    <div>
+      <Nav isDimmed={isModalOpen}/>
+      <Hero isModalOpen={isModalOpen} setIsModalOpen={setIsModalOpen}/>
+      <SkillTree/>
+      <LessonAnatomy/>
+      <Gamification/>
+      <Curriculum/>
+      <Testimonials/>
+      <CTA/>
+      <Footer/>
+    </div>
+  );
+}
 
 const rootEl = document.getElementById('root');
 if (rootEl) createRoot(rootEl).render(<App/>);
