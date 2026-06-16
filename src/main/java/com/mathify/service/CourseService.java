@@ -29,4 +29,22 @@ public class CourseService {
             throw new RuntimeException("DB error", e);
         }
     }
+
+    /** Every prerequisite edge across the catalog — the skill-tree graph. */
+    public List<CourseDAO.PrereqEdge> getAllPrerequisites() {
+        try {
+            return courseDAO.findAllPrerequisites();
+        } catch (SQLException e) {
+            throw new RuntimeException("DB error", e);
+        }
+    }
+
+    /** Ordered learning path to reach {@code courseId} (transitive prereqs first, target last). */
+    public List<CourseCardView> getPrerequisitePath(String courseId) {
+        try {
+            return courseDAO.findPrerequisitePath(courseId);
+        } catch (SQLException e) {
+            throw new RuntimeException("DB error", e);
+        }
+    }
 }
