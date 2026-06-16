@@ -20,8 +20,8 @@ const SC = window.STUDENT_CONTEXT || {};
       <span className="mono" style={{ fontFamily: "'JetBrains Mono', monospace", background: display ? 'transparent' : 'var(--bg-2)', padding: display ? '0' : '2px 7px', borderRadius: 6, fontSize: display ? 'inherit' : '0.95em' }}>{children}</span>
     );
 
-    // ── Quiz data ──────────────────────────────────────────────────────────────
-    const QUIZ = {
+    // ── Sample quiz (fallback when the server provides no quiz) ─────────────────
+    const SAMPLE_QUIZ = {
       lesson:  'The chain rule, intuitively',
       chapter: 'Introduction to Derivatives',
       course:  'Differential Calculus',
@@ -29,7 +29,7 @@ const SC = window.STUDENT_CONTEXT || {};
       xpReward: 24,
       questions: [
         {
-          id: 1,
+          id: 1, type: 'mc',
           prompt: <span>If <MathSpan>h(x) = f(g(x))</MathSpan>, the chain rule states that:</span>,
           choices: [
             { id: 'a', text: <span><MathSpan>h′(x) = f′(g(x)) · g′(x)</MathSpan></span>, correct: true  },
@@ -40,7 +40,7 @@ const SC = window.STUDENT_CONTEXT || {};
           explanation: <span>The chain rule says: differentiate the outer function (leaving the inner unchanged), then multiply by the derivative of the inner function. So <MathSpan>h′(x) = f′(g(x)) · g′(x)</MathSpan>.</span>,
         },
         {
-          id: 2,
+          id: 2, type: 'mc',
           prompt: <span>Find <MathSpan>dy/dx</MathSpan> if <MathSpan>y = sin(3x)</MathSpan>.</span>,
           choices: [
             { id: 'a', text: <span><MathSpan>cos(3x)</MathSpan></span>,    correct: false },
@@ -51,7 +51,7 @@ const SC = window.STUDENT_CONTEXT || {};
           explanation: <span>Outer function: <MathSpan>sin(u)</MathSpan> → derivative <MathSpan>cos(u)</MathSpan>. Inner function: <MathSpan>3x</MathSpan> → derivative <MathSpan>3</MathSpan>. Chain rule gives <MathSpan>3 cos(3x)</MathSpan>.</span>,
         },
         {
-          id: 3,
+          id: 3, type: 'mc',
           prompt: <span>Differentiate <MathSpan>y = (x² + 1)⁵</MathSpan>.</span>,
           choices: [
             { id: 'a', text: <span><MathSpan>5(x² + 1)⁴</MathSpan></span>,        correct: false },
@@ -62,7 +62,7 @@ const SC = window.STUDENT_CONTEXT || {};
           explanation: <span>Outer: power rule gives <MathSpan>5(x² + 1)⁴</MathSpan>. Inner: <MathSpan>2x</MathSpan>. Product: <MathSpan>10x(x² + 1)⁴</MathSpan>.</span>,
         },
         {
-          id: 4,
+          id: 4, type: 'mc',
           prompt: <span>The "inner function" in <MathSpan>y = e^(x²)</MathSpan> is:</span>,
           choices: [
             { id: 'a', text: <span><MathSpan>e^x</MathSpan></span>,  correct: false },
@@ -73,7 +73,7 @@ const SC = window.STUDENT_CONTEXT || {};
           explanation: <span>Composing <MathSpan>e^u</MathSpan> with <MathSpan>u = x²</MathSpan>. The inner function is <MathSpan>g(x) = x²</MathSpan>.</span>,
         },
         {
-          id: 5,
+          id: 5, type: 'mc',
           prompt: <span>Which expression equals <MathSpan>d/dx[cos(x³)]</MathSpan>?</span>,
           choices: [
             { id: 'a', text: <span><MathSpan>-sin(x³)</MathSpan></span>,          correct: false },
@@ -84,7 +84,7 @@ const SC = window.STUDENT_CONTEXT || {};
           explanation: <span>Outer: <MathSpan>-sin(u)</MathSpan>. Inner: <MathSpan>x³</MathSpan> → <MathSpan>3x²</MathSpan>. Result: <MathSpan>-3x² sin(x³)</MathSpan>.</span>,
         },
         {
-          id: 6,
+          id: 6, type: 'mc',
           prompt: <span>If <MathSpan>f(u) = u⁴</MathSpan> and <MathSpan>u = 2x + 1</MathSpan>, what is <MathSpan>df/dx</MathSpan>?</span>,
           choices: [
             { id: 'a', text: <span><MathSpan>4(2x + 1)³</MathSpan></span>,   correct: false },
@@ -96,6 +96,59 @@ const SC = window.STUDENT_CONTEXT || {};
         },
       ],
     };
+
+    // ── Adapt the server quizJson (QuizServlet#quizToJson) to the island shape ──
+    // Server question types: MULTIPLE_CHOICE | FILL_BLANK | DRAG_DROP.
+    function adaptServerQuiz(data) {
+      const questions = (data.questions || []).map((q, i) => {
+        const base = { id: q.id || i + 1, prompt: q.prompt };
+        if (q.type === 'MULTIPLE_CHOICE') {
+          const choices = (q.choices || []).map((c) => ({ id: c.id, text: c.text, correct: !!c.correct }));
+          const correctText = choices.filter((c) => c.correct).map((c) => c.text).join(', ');
+          return { ...base, type: 'mc', choices, explanation: correctText ? 'Correct answer: ' + correctText : '' };
+        }
+        if (q.type === 'FILL_BLANK') {
+          const answers = q.correctAnswers || [];
+          return {
+            ...base, type: 'fill', answers, caseSensitive: !!q.caseSensitive,
+            explanation: answers.length ? 'Accepted answer' + (answers.length > 1 ? 's' : '') + ': ' + answers.join(', ') : '',
+          };
+        }
+        // DRAG_DROP or any future type — render informationally so the quiz still flows.
+        const items = (q.draggables || []).map((d) => d.label);
+        return {
+          ...base, type: 'info', items,
+          explanation: items.length ? 'Items: ' + items.join(', ') : 'This question type is not interactive here.',
+        };
+      });
+      return {
+        lesson:   data.title || 'Quiz',
+        course:   '',
+        chapter:  '',
+        totalQ:   data.totalQ || questions.length,
+        xpReward: data.xpReward || 0,
+        questions,
+      };
+    }
+
+    const SERVER_QUIZ = window.QUIZ_DATA || {};
+    const QUIZ = (SERVER_QUIZ.questions && SERVER_QUIZ.questions.length)
+      ? adaptServerQuiz(SERVER_QUIZ)
+      : SAMPLE_QUIZ;
+
+    const QUIZ_SUBTITLE = [QUIZ.course, QUIZ.chapter].filter(Boolean).join(' · ') || QUIZ.lesson;
+
+    // True when the student's current answer (`sel`) is correct for question `q`.
+    function isAnswerCorrect(q, sel) {
+      if (!q) return false;
+      if (q.type === 'fill') {
+        const val = String(sel || '').trim();
+        if (!val) return false;
+        return (q.answers || []).some((a) => q.caseSensitive ? a === val : a.toLowerCase() === val.toLowerCase());
+      }
+      if (q.type === 'info') return true;
+      return (q.choices || []).find((c) => c.id === sel)?.correct || false;
+    }
 
     // ── Timer hook ─────────────────────────────────────────────────────────────
     const useTimer = (startSeconds) => {
@@ -156,7 +209,7 @@ const SC = window.STUDENT_CONTEXT || {};
       </div>
     );
 
-    // ── Choice Button ──────────────────────────────────────────────────────────
+    // ── Choice Button (multiple choice) ────────────────────────────────────────
     const ChoiceButton = ({ choice, selected, revealed, onSelect }) => {
       const isSelected = selected === choice.id;
       const correct = choice.correct;
@@ -177,12 +230,56 @@ const SC = window.STUDENT_CONTEXT || {};
           onClick={() => !revealed && onSelect(choice.id)}
           style={{ width: '100%', padding: '16px 20px', borderRadius: 14, border: '1.5px solid ' + border, background: bg, color: color, textAlign: 'left', cursor: revealed ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 14, fontSize: 15, fontWeight: isSelected || (revealed && correct) ? 700 : 500, transition: 'border-color .15s,background .15s', boxShadow: isSelected && !revealed ? 'var(--shadow-sm)' : 'none' }}
         >
-          <span className="mono" style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--bg-2)', color: 'var(--ink-3)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>{choice.id.toUpperCase()}</span>
+          <span className="mono" style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--bg-2)', color: 'var(--ink-3)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>{String(choice.id).slice(0, 1).toUpperCase()}</span>
           <span style={{ flex: 1 }}>{choice.text}</span>
           {iconEl}
         </button>
       );
     };
+
+    // ── Fill-in-the-blank input ─────────────────────────────────────────────────
+    const FillBlankInput = ({ value, revealed, correct, onChange, onEnter }) => {
+      let border = 'var(--line)', bg = 'var(--paper)', color = 'var(--ink)';
+      if (revealed) {
+        if (correct) { border = 'var(--green)'; bg = 'var(--green-soft)'; color = 'var(--green-deep)'; }
+        else         { border = 'var(--rose)';  bg = 'var(--rose-soft)';  color = 'var(--rose)'; }
+      } else if (value) { border = 'var(--blue)'; bg = 'var(--blue-soft)'; color = 'var(--blue-deep)'; }
+      return (
+        <input
+          type="text"
+          value={value}
+          disabled={revealed}
+          autoFocus
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter' && onEnter) onEnter(); }}
+          placeholder="Type your answer…"
+          className="mono"
+          style={{ width: '100%', padding: '16px 20px', borderRadius: 14, border: '1.5px solid ' + border, background: bg, color, fontSize: 15, fontWeight: 600, fontFamily: "'JetBrains Mono', monospace", outline: 'none' }}
+        />
+      );
+    };
+
+    // ── Informational question body (drag-drop / unsupported types) ─────────────
+    const InfoBody = ({ items, selected, revealed, onSelect }) => (
+      <div>
+        {items && items.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+            {items.map((t, i) => (
+              <span key={i} className="mono" style={{ padding: '8px 12px', borderRadius: 10, background: 'var(--bg-2)', color: 'var(--ink-2)', fontSize: 13 }}>{t}</span>
+            ))}
+          </div>
+        )}
+        {!revealed && (
+          <button
+            onClick={onSelect}
+            disabled={selected === 'ok'}
+            style={{ padding: '12px 20px', borderRadius: 12, border: '1px solid var(--line)', background: selected === 'ok' ? 'var(--blue-soft)' : 'var(--paper)', color: selected === 'ok' ? 'var(--blue-deep)' : 'var(--ink-2)', fontWeight: 700, fontSize: 14, cursor: selected === 'ok' ? 'default' : 'pointer' }}
+          >
+            {selected === 'ok' ? 'Marked as reviewed ✓' : "I've reviewed this"}
+          </button>
+        )}
+      </div>
+    );
 
     // ── Quiz Action Bar ────────────────────────────────────────────────────────
     const QuizActionBar = ({ selected, revealed, isLast, onCheck, onNext, onFinish, correctAnswer, explanation }) => {
@@ -208,7 +305,7 @@ const SC = window.STUDENT_CONTEXT || {};
               </span>
               {correctAnswer && <Icon.Sparkle style={{ color: 'var(--green-deep)', width: 14, height: 14 }}/>}
             </div>
-            <div style={{ fontSize: 14, color: correctAnswer ? 'var(--green-deep)' : 'var(--rose)', lineHeight: 1.5 }}>{explanation}</div>
+            {explanation && <div style={{ fontSize: 14, color: correctAnswer ? 'var(--green-deep)' : 'var(--rose)', lineHeight: 1.5 }}>{explanation}</div>}
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <button
@@ -281,7 +378,7 @@ const SC = window.STUDENT_CONTEXT || {};
 
       const handleCheck = () => {
         if (!selected) return;
-        const correct = question.choices.find((c) => c.id === selected)?.correct || false;
+        const correct = isAnswerCorrect(question, selected);
         setAnswers((prev) => [...prev, { qId: question.id, correct }]);
         setRevealed(true);
       };
@@ -302,7 +399,7 @@ const SC = window.STUDENT_CONTEXT || {};
         return <SessionPanel total={QUIZ.totalQ} correct={correct} xpEarned={xpEarned} onContinue={() => { setDone(false); setQIndex(0); setAnswers([]); setSelected(null); setRevealed(false); }}/>;
       }
 
-      const correctAnswer = revealed && (question.choices.find((c) => c.id === selected)?.correct || false);
+      const correctAnswer = revealed && isAnswerCorrect(question, selected);
       const heartsLeft    = 5 - answers.filter((a) => !a.correct).length;
 
       return (
@@ -316,20 +413,38 @@ const SC = window.STUDENT_CONTEXT || {};
           />
           <div style={{ flex: 1, maxWidth: 760, margin: '0 auto', padding: '32px 24px 80px', width: '100%' }}>
             <div style={{ marginBottom: 16 }}>
-              <span style={{ fontSize: 12, color: 'var(--ink-3)', fontWeight: 600 }}>{QUIZ.course} · {QUIZ.chapter}</span>
+              <span style={{ fontSize: 12, color: 'var(--ink-3)', fontWeight: 600 }}>{QUIZ_SUBTITLE}</span>
             </div>
             <QuestionCard question={question} index={qIndex}/>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
-              {question.choices.map((choice) => (
-                <ChoiceButton
-                  key={choice.id}
-                  choice={choice}
-                  selected={selected}
+
+            {question.type === 'fill' ? (
+              <div style={{ marginBottom: 24 }}>
+                <FillBlankInput
+                  value={selected || ''}
                   revealed={revealed}
-                  onSelect={setSelected}
+                  correct={correctAnswer}
+                  onChange={setSelected}
+                  onEnter={() => { if (selected && !revealed) handleCheck(); }}
                 />
-              ))}
-            </div>
+              </div>
+            ) : question.type === 'info' ? (
+              <div style={{ marginBottom: 24 }}>
+                <InfoBody items={question.items} selected={selected} revealed={revealed} onSelect={() => setSelected('ok')}/>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
+                {question.choices.map((choice) => (
+                  <ChoiceButton
+                    key={choice.id}
+                    choice={choice}
+                    selected={selected}
+                    revealed={revealed}
+                    onSelect={setSelected}
+                  />
+                ))}
+              </div>
+            )}
+
             <QuizActionBar
               selected={selected}
               revealed={revealed}
@@ -345,4 +460,5 @@ const SC = window.STUDENT_CONTEXT || {};
       );
     };
 
-    createRoot(document.getElementById('root')).render(<QuizApp/>);
+    const rootEl = document.getElementById('root');
+    if (rootEl) createRoot(rootEl).render(<QuizApp/>);

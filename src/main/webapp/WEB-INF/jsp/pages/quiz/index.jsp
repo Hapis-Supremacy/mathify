@@ -41,6 +41,7 @@
       xp:      <%= totalXP %>,
       ctx:     "<%= ctx %>"
     };
+    var QUIZ_DATA = <%= request.getAttribute("quizJson") != null ? request.getAttribute("quizJson") : "{}" %>;
   </script>
 
 
