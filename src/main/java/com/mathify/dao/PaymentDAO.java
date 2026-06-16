@@ -1,5 +1,7 @@
 package com.mathify.dao;
 
+import jakarta.enterprise.context.ApplicationScoped;
+
 import com.mathify.model.Payment;
 import com.mathify.model.PaymentStatus;
 import com.mathify.model.Plan;
@@ -12,6 +14,7 @@ import java.sql.SQLException;
  * The row is created PENDING at checkout and flipped to PAID/FAILED only after
  * server-side verification with Midtrans.
  */
+@ApplicationScoped
 public class PaymentDAO {
 
     /** Inserts a new PENDING payment for an order. */
@@ -45,3 +48,4 @@ public class PaymentDAO {
         QueryHelper.executeUpdate(sql, status.name(), orderId);
     }
 }
+

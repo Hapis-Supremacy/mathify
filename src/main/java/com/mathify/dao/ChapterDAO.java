@@ -1,5 +1,7 @@
 package com.mathify.dao;
 
+import jakarta.enterprise.context.ApplicationScoped;
+
 import com.mathify.model.Chapter;
 import com.mathify.model.Quiz;
 import com.mathify.util.DBConnection;
@@ -17,6 +19,7 @@ import java.util.List;
  * and composes the full chapter on read by delegating to {@link LearningModuleDAO}
  * and {@link QuizDAO}. {@code orderIndex} preserves the position within a course.
  */
+@ApplicationScoped
 public class ChapterDAO {
 
     private final LearningModuleDAO moduleDAO = new LearningModuleDAO();
@@ -134,3 +137,4 @@ public class ChapterDAO {
         return QueryHelper.queryOne(sql, rs -> rs.getString("course_id"), chapterId);
     }
 }
+

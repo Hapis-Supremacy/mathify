@@ -1,5 +1,7 @@
 package com.mathify.dao;
 
+import jakarta.enterprise.context.ApplicationScoped;
+
 import com.mathify.model.Notification;
 import com.mathify.model.NotificationType;
 import com.mathify.util.QueryHelper;
@@ -9,6 +11,7 @@ import java.sql.SQLException;
 import java.util.List;
 
 /** CRUD for the {@code notifications} table — the per-user in-app feed. */
+@ApplicationScoped
 public class NotificationDAO {
 
     /**
@@ -70,3 +73,4 @@ public class NotificationDAO {
                 rs.getTimestamp("created_at").toLocalDateTime());
     }
 }
+

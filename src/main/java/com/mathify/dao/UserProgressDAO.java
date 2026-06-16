@@ -1,5 +1,7 @@
 package com.mathify.dao;
 
+import jakarta.enterprise.context.ApplicationScoped;
+
 import com.mathify.model.UserProgress;
 import com.mathify.model.Achievement;
 import com.mathify.util.DBConnection;
@@ -13,6 +15,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.AbstractMap;
 
+@ApplicationScoped
 public class UserProgressDAO {
 
     /**
@@ -94,3 +97,4 @@ public class UserProgressDAO {
         }
     }
 }
+

@@ -1,5 +1,7 @@
 package com.mathify.dao;
 
+import jakarta.enterprise.context.ApplicationScoped;
+
 import com.mathify.model.AuthUser;
 import com.mathify.util.DBConnection;
 
@@ -7,6 +9,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
+@ApplicationScoped
 public class UserDAO {
 
     /**
@@ -30,3 +33,4 @@ public class UserDAO {
         }
     }
 }
+
