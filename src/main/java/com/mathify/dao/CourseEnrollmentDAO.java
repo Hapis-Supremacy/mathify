@@ -1,5 +1,7 @@
 package com.mathify.dao;
 
+import jakarta.enterprise.context.ApplicationScoped;
+
 import com.mathify.model.CourseEnrollment;
 import com.mathify.util.QueryHelper;
 
@@ -9,6 +11,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /** Per-user course enrollments ({@code course_enrollments}). */
+@ApplicationScoped
 public class CourseEnrollmentDAO {
 
     /** Enrolls a user in a course. No-op if already enrolled. */
@@ -73,3 +76,4 @@ public class CourseEnrollmentDAO {
                 completedAt);
     }
 }
+

@@ -1,5 +1,7 @@
 package com.mathify.dao;
 
+import jakarta.enterprise.context.ApplicationScoped;
+
 import com.mathify.model.QuizAttempt;
 import com.mathify.util.QueryHelper;
 
@@ -10,6 +12,7 @@ import java.util.List;
  * Per-user quiz attempts ({@code quiz_attempts}). One row per (user, quiz),
  * holding the best score — matching {@code UserProgress.recordQuizAttempt}.
  */
+@ApplicationScoped
 public class QuizAttemptDAO {
 
     /** Records an attempt, keeping it only if it beats the stored score. */
@@ -42,3 +45,4 @@ public class QuizAttemptDAO {
                 rs.getTimestamp("completed_at").toLocalDateTime());
     }
 }
+

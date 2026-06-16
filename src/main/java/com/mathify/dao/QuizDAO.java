@@ -1,5 +1,7 @@
 package com.mathify.dao;
 
+import jakarta.enterprise.context.ApplicationScoped;
+
 import com.mathify.model.Question;
 import com.mathify.model.Quiz;
 import com.mathify.util.DBConnection;
@@ -17,6 +19,7 @@ import java.util.List;
  * persistence to {@link QuestionDAO}. A {@code Quiz} requires at least one
  * question, so reconstruction always loads its questions.
  */
+@ApplicationScoped
 public class QuizDAO {
 
     private final QuestionDAO questionDAO = new QuestionDAO();
@@ -74,3 +77,4 @@ public class QuizDAO {
         QueryHelper.executeUpdate("DELETE FROM quizzes WHERE quiz_id = ?", quizId);
     }
 }
+

@@ -1,5 +1,7 @@
 package com.mathify.dao;
 
+import jakarta.enterprise.context.ApplicationScoped;
+
 import com.mathify.model.PremiumStudent;
 import com.mathify.model.Subscribable;
 import com.mathify.util.QueryHelper;
@@ -12,6 +14,7 @@ import java.time.LocalDate;
  * A student's subscription ({@code subscriptions}). One row per user.
  * Reconstructs a {@link PremiumStudent} (the only {@link Subscribable} impl).
  */
+@ApplicationScoped
 public class SubscriptionDAO {
 
     /** Inserts or updates the subscription for a user. */
@@ -58,3 +61,4 @@ public class SubscriptionDAO {
         QueryHelper.executeUpdate("DELETE FROM subscriptions WHERE uid = ?", uid);
     }
 }
+
