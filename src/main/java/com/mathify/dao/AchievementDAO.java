@@ -1,5 +1,7 @@
 package com.mathify.dao;
 
+import jakarta.enterprise.context.ApplicationScoped;
+
 import com.mathify.model.Achievement;
 import com.mathify.util.QueryHelper;
 
@@ -7,6 +9,7 @@ import java.sql.SQLException;
 import java.util.List;
 
 /** CRUD for the {@code achievements} catalog table. */
+@ApplicationScoped
 public class AchievementDAO {
 
     /** Inserts a new achievement, or updates title/category/requirement if the id exists. */
@@ -50,3 +53,4 @@ public class AchievementDAO {
         upsert(new Achievement("high_achiever", "High Achiever", "XP", "Earn a total of 1000 XP"));
     }
 }
+

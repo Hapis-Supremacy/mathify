@@ -1,5 +1,7 @@
 package com.mathify.dao;
 
+import jakarta.enterprise.context.ApplicationScoped;
+
 import com.mathify.model.Achievement;
 import com.mathify.util.QueryHelper;
 
@@ -12,6 +14,7 @@ import java.util.List;
  * Join table between users and the achievements they have earned
  * ({@code user_achievements}). Mirrors {@code UserProgress.achievements}.
  */
+@ApplicationScoped
 public class UserAchievementDAO {
 
     /** Records that a user earned an achievement. No-op if already awarded. */
@@ -51,3 +54,4 @@ public class UserAchievementDAO {
         }, uid);
     }
 }
+

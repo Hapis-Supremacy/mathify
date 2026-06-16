@@ -1,5 +1,7 @@
 package com.mathify.dao;
 
+import jakarta.enterprise.context.ApplicationScoped;
+
 import com.mathify.model.ChapterProgress;
 import com.mathify.util.QueryHelper;
 
@@ -10,6 +12,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /** Per-user chapter progress ({@code chapter_progress}). */
+@ApplicationScoped
 public class ChapterProgressDAO {
 
     /** Inserts or updates a user's progress for one chapter. */
@@ -47,3 +50,4 @@ public class ChapterProgressDAO {
                 Duration.ofSeconds(rs.getLong("time_spent_seconds")));
     }
 }
+

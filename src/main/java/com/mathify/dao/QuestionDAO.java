@@ -1,5 +1,7 @@
 package com.mathify.dao;
 
+import jakarta.enterprise.context.ApplicationScoped;
+
 import com.mathify.model.DragDropQuestion;
 import com.mathify.model.DragItem;
 import com.mathify.model.DropZone;
@@ -29,6 +31,7 @@ import java.util.Set;
  *
  * <p>Aggregate writes run inside a single transaction.
  */
+@ApplicationScoped
 public class QuestionDAO {
 
     /** Inserts a question and its payload for the given quiz. {@code orderIndex} preserves list order. */
@@ -246,3 +249,4 @@ public class QuestionDAO {
         return new DragDropQuestion(info, draggables, dropZones, pairings);
     }
 }
+

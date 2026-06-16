@@ -1,5 +1,7 @@
 package com.mathify.dao;
 
+import jakarta.enterprise.context.ApplicationScoped;
+
 import com.mathify.model.LearningModule;
 import com.mathify.model.ModuleInfo;
 import com.mathify.model.ModuleType;
@@ -22,6 +24,7 @@ import java.util.List;
  * in {@code learning_modules}; subtype payload lives in {@code video_modules} or
  * {@code slide_modules} (+ {@code slides}). Aggregate writes run in one transaction.
  */
+@ApplicationScoped
 public class LearningModuleDAO {
 
     public void insert(String chapterId, LearningModule module) throws SQLException {
@@ -177,3 +180,4 @@ public class LearningModuleDAO {
         return new SlideModule(info, slides, secondsPerSlide);
     }
 }
+

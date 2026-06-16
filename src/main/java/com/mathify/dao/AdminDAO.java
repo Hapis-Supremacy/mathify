@@ -1,5 +1,7 @@
 package com.mathify.dao;
 
+import jakarta.enterprise.context.ApplicationScoped;
+
 import com.mathify.model.Admin;
 import com.mathify.util.QueryHelper;
 
@@ -13,6 +15,7 @@ import java.sql.Timestamp;
  * <p>Reconstruction uses {@code Admin(id, name, email, role)} so a loaded admin keeps
  * its stored {@code admin_id} (i.e. {@code getUserId()} matches the DB row).
  */
+@ApplicationScoped
 public class AdminDAO {
 
     /** Inserts a new admin or updates name/role/last-login if the id already exists. */
@@ -56,3 +59,4 @@ public class AdminDAO {
         return admin;
     }
 }
+

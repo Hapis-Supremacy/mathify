@@ -1,5 +1,7 @@
 package com.mathify.dao;
 
+import jakarta.enterprise.context.ApplicationScoped;
+
 import com.mathify.model.Course;
 import com.mathify.model.CourseCardView;
 import com.mathify.util.DBConnection;
@@ -18,6 +20,7 @@ import java.util.List;
  *   - {@link Course}: the domain aggregate (chapters + prerequisites), composed via
  *     {@link ChapterDAO}. The domain {@code category} maps to the {@code track} column.
  */
+@ApplicationScoped
 public class CourseDAO {
 
     private final ChapterDAO chapterDAO = new ChapterDAO();
@@ -207,3 +210,4 @@ public class CourseDAO {
         return c;
     }
 }
+
