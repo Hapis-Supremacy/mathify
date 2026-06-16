@@ -18,6 +18,8 @@ const Icon = {
   X:       (p) => <svg width="16" height="16" viewBox="0 0 16 16" fill="none" {...p}><path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>,
 };
 
+const MODAL_BACKDROP = 'rgba(0,0,0,0.75)';
+
 /* ── Logo ───────────────────────────────────────────────────────── */
 const Logo = () => (
   <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
@@ -30,7 +32,7 @@ const Logo = () => (
 
 
 /* ── Nav ────────────────────────────────────────────────────────── */
-const Nav = ({ isDimmed }) => {
+const Nav = ({ isVideoActive }) => {
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 24);
@@ -40,10 +42,10 @@ const Nav = ({ isDimmed }) => {
 
   return (
     <header style={{
-      position: 'sticky', top: 0, zIndex: 50,
+      position: isVideoActive ? 'static' : 'sticky', top: 0, zIndex: 50,
       padding: scrolled ? '14px 0' : '22px 0',
       transition: 'padding .2s ease',
-      background: isDimmed ? 'rgba(0, 0, 0, 0.75)' : '#fbf9f4',
+      background: '#fbf9f4',
     }} className="bg-[#fbf9f4]">
       <div style={{ maxWidth: 1240, margin: '0 auto', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <a href="/">
@@ -332,7 +334,7 @@ function VideoModal({isModalOpen, setIsModalOpen}) {
         <div
           onClick={(e) => { if (e.target === e.currentTarget) setIsModalOpen(false); }}
           style={{
-            position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)",
+            position: "fixed", inset: 0, background: MODAL_BACKDROP,
             display: "flex", alignItems: "center", justifyContent: "center",
             zIndex: 1000,
           }}
@@ -1040,9 +1042,23 @@ const Footer = () => (
 const App = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  useEffect(() => {
+    if (!isModalOpen) return;
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+    };
+  }, [isModalOpen]);
+
   return (
     <div>
-      <Nav isDimmed={isModalOpen}/>
+      <Nav isVideoActive={isModalOpen}/>
       <Hero isModalOpen={isModalOpen} setIsModalOpen={setIsModalOpen}/>
       <SkillTree/>
       <LessonAnatomy/>
