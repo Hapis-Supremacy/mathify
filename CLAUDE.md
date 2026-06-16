@@ -14,79 +14,23 @@ Built as an academic project by Hapis Supremacy at Telkom University.
 
 ## Architecture
 
-- **Pattern:** MVC via Java Servlets + JSP
-- **Backend:** Jakarta EE Servlets (no Spring — keep it vanilla unless discussed)
-- **View layer:** JSP templates under `src/main/webapp/`
-- **Database:** PostgreSQL (via JDBC)
+- **Pattern:** REST API (JAX-RS resources → service layer → DAO → JDBC)
+- **Backend:** Jakarta EE on the full Web Profile — **JAX-RS** for endpoints, **CDI** for wiring, **Bean Validation** for request DTOs (no Spring)
+- **View layer:** JSP for the marketing/landing pages; the app shell is a Vite/React frontend that consumes the REST API
+- **Database:** PostgreSQL (via JDBC, no ORM)
 - **Build:** Maven, packaged as `.war`
-- **Runtime:** Apache Tomcat 10 inside Docker
+- **Runtime:** **WildFly 31** inside Docker (a full Jakarta EE server — provides JAX-RS, CDI and Bean Validation that plain Tomcat does not)
 
-The project is a standard Maven webapp archetype. There is no dependency injection framework — wiring is manual for now.
+The project migrated from a Servlet+JSP MVC app to a REST API. Wiring is done with **CDI** (`@Inject`, `@ApplicationScoped`) — DAOs and services are CDI beans; `beans.xml` uses `bean-discovery-mode="annotated"`.
 
----
+### REST conventions
 
-## Project Structure
-
-## Project Structure
-
-```
-src/
-└── main/
-    ├── java/
-    │   └── com/mathify/
-    │       ├── controller/      # HttpServlet subclasses (controllers)
-    │       ├── model/           # Plain Java objects (data models)
-    │       ├── dao/             # Data Access Objects (DB queries)
-    │       ├── service/         # Business logic layer
-    │       └── util/            # Helpers (DB connection, etc.)
-    ├── resources/               # Config files, SQL scripts
-    └── webapp/
-        ├── index.jsp                                Entry point — forwards to landing.
-        ├── WEB-INF/
-        │   ├── web.xml                              Servlet descriptor.
-        │   ├── tags/                                Custom tag library (shared).
-        │   │   ├── layout.tag                       <m:layout> page shell.
-        │   │   ├── icon.tag                         <m:icon name="…"/> SVG icons.
-        │   │   └── sectionHeader.tag                <m:sectionHeader …/> section headers.
-        │   └── jsp/
-        │       ├── pages/                           Page-specific JSPs.
-        │       │   └── landing/
-        │       │       ├── index.jsp                Landing page composition.
-        │       │       └── sections/                Landing-only sections.
-        │       │           ├── hero.jsp
-        │       │           ├── herodevice.jsp
-        │       │           ├── skilltree.jsp
-        │       │           ├── chapter.jsp
-        │       │           ├── gamification.jsp
-        │       │           ├── curriculum.jsp
-        │       │           ├── testimonials.jsp
-        │       │           └── cta.jsp
-        │       └── shared/                          JSPs reused across pages.
-        │           ├── nav.jsp
-        │           └── footer.jsp
-        └── assets/                                  Static files served directly.
-            ├── css/
-            │   ├── base.css                         Design tokens, body, typography.
-            │   └── landing.css                      Landing-only effects (drift, dot grid).
-            └── js/
-                ├── tailwind.config.js               Tailwind CDN theme extension.
-                └── landing/
-                    └── skilltree.js                 Alpine factory for the skill tree.
-```
-
-### Why this layout?
-
-- **Page co-location.** Everything used by one page (its sections, its
-  CSS, its JS) sits under a folder named after the page. Easy to find,
-  easy to delete.
-- **`shared/` for cross-page parts.** `nav.jsp` and `footer.jsp` are
-  visible on every page; pulling them out avoids duplication and keeps
-  page folders focused on what's unique.
-- **`WEB-INF/` for templates, `assets/` for static.** Anything under
-  `WEB-INF/` is unreachable via URL, which prevents direct access to
-  partial JSPs; assets get served directly by the container.
-
-> Note: The package structure above is the **intended** structure. The project is early-stage — help scaffold toward this layout when adding new files.
+- **Resources** live in `com.mathify.rest` (`@Path`, auto-discovered — `RestApplication` is `@ApplicationPath("/api")`, so everything is under `/api`).
+- **Services** (`com.mathify.service`, `@ApplicationScoped`) hold business logic; resources stay thin.
+- **DAOs** (`com.mathify.dao`, `@ApplicationScoped`) do JDBC via `QueryHelper`.
+- **DTOs** in `com.mathify.rest.dto.{request,response}` — request DTOs are validated with `@Valid`; responses are records/POJOs serialized by JSON-B. Do **not** hand-build JSON with `org.json` in new code.
+- **Auth:** session-based. `AuthService.login` verifies a Firebase token and stores `authUser` (and `admin`) on the `HttpSession`. Protect endpoints with the `@Secured` annotation (enforced by `AuthenticationFilter`); read the current user via `Sessions.currentUser(request)`.
+- **Errors** are mapped centrally by `GlobalExceptionMapper` / `ValidationExceptionMapper` to `ErrorResponse` JSON.
 
 ---
 
@@ -100,6 +44,7 @@ Follow standard idiomatic Java:
 - **Packages:** all lowercase, dot-separated — e.g., `com.mathify.dao`
 - **Database tables:** `snake_case` — e.g., `user_progress`, `course_lesson`
 - **JSP files:** `kebab-case` or `camelCase` are both fine, be consistent within a feature
+- **JAX-RS resources:** `XxxResource` (e.g. `CourseResource`); **services:** `XxxService`; **DAOs:** `XxxDAO`; **DTOs:** `XxxRequest` / `XxxResponse`
 
 ---
 
@@ -116,17 +61,22 @@ Follow standard idiomatic Java:
 ## Build & Run
 
 ```bash
-# Run with Docker (preferred)
+# Run with Docker (preferred) — builds the WAR and deploys to WildFly
 docker compose up --build -d
 
-# Build WAR locally
+# Build WAR locally (requires the frontend/ Vite project — see note below)
 ./mvnw package -DskipTests
 
-# Run locally via Maven Tomcat plugin
-./mvnw tomcat7:run
+# Compile Java only, without the frontend npm build (fast inner loop)
+./mvnw compiler:compile
 ```
 
-Multi-stage Docker build — Maven build happens inside Docker, no pre-built WAR needed.
+Multi-stage Docker build — the Maven build (including the `frontend/` Vite bundle) happens inside Docker, then the WAR is deployed to WildFly 31 as `ROOT.war`. No pre-built WAR needed.
+
+> **Build note:** `frontend-maven-plugin` runs an `npm` build against a `frontend/`
+> Vite project during `mvn package`. A full `package` (and `docker compose up --build`)
+> will fail unless that `frontend/` directory is present. For backend-only work,
+> use `./mvnw compiler:compile` to skip the frontend step.
 
 ---
 
@@ -136,28 +86,33 @@ Key dependencies and their intended scopes:
 
 | Dependency | Scope | Reason |
 |---|---|---|
-| `jakarta.servlet-api` | `provided` | Tomcat provides this at runtime |
+| `jakarta.jakartaee-web-api` | `provided` | Jakarta EE Web Profile (Servlet, JAX-RS, CDI, Bean Validation) — WildFly provides it at runtime |
 | `postgresql` (JDBC driver) | `compile` | Bundled in WAR |
+| `firebase-admin` | `compile` | Firebase token verification; also pulls in `org.json` transitively |
+| `slf4j-api` | `compile` | Logging facade |
 | `junit-jupiter` | `test` | Unit testing only |
 
-Always check scope before adding a new dependency. Wrong scope (especially `provided` vs `compile`) is a common source of runtime errors on Tomcat.
+Always check scope before adding a new dependency. Wrong scope (especially `provided` vs `compile`) is a common source of runtime errors. Because the runtime is **WildFly** (a full EE server), the Jakarta EE APIs are `provided` — do **not** bundle a JAX-RS/CDI implementation in the WAR.
 
 ---
 
 ## What to Avoid
 
-- Do not introduce Spring, Spring Boot, or any other web framework unless explicitly asked
-- Do not add Hibernate or JPA — use plain JDBC for now
-- Do not modify `compose.yaml` or `Dockerfile` without understanding the multi-stage build setup
-- Do not put business logic inside Servlets — route to a service layer
+- Do not introduce Spring, Spring Boot, or any other web framework — the stack is Jakarta EE (JAX-RS + CDI)
+- Do not add Hibernate or JPA — use plain JDBC (`QueryHelper`) for now
+- Do not modify `compose.yaml` or `Dockerfile` without understanding the multi-stage build + WildFly deploy
+- Do not put business logic inside JAX-RS resources — route to a `@ApplicationScoped` service
+- Do not hand-build JSON with `org.json` in new endpoints — return DTOs and let JSON-B serialize
 - Do not hardcode database credentials — use environment variables
 
 ---
 
 ## Current State
 
-The project is in early development. At the time of writing:
+The project has migrated to a REST API. At the time of writing:
 
-- `index.jsp` is the default landing page
+- `RestApplication` mounts JAX-RS at `/api`.
+- Implemented endpoints: `POST /api/auth/{login,logout}`, `GET /api/courses`, `GET /api/courses/{id}`, `GET /api/courses/paths`, `GET /api/quizzes/{id}`, `GET /api/me`, `GET /api/students/me/enrollments`.
+- The frontend has a backlog of further endpoints (dashboard aggregates, quests, achievements, modules, enroll/submit POSTs, subscription, admin metrics) — not yet implemented.
 
-When helping scaffold new features, follow the package structure defined above and suggest creating the full vertical slice (model → DAO → service → servlet → JSP).
+When helping scaffold new endpoints, build the full vertical slice: **DTO → DAO → service → JAX-RS resource**, with `@Secured` for authenticated routes and validation on request DTOs.
