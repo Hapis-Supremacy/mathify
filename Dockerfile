@@ -7,10 +7,9 @@ WORKDIR /app
 COPY pom.xml .
 RUN mvn dependency:go-offline -q
 
+# REST API only — the frontend lives in a separate Next.js repo, so this is a
+# pure backend build that produces the WAR.
 COPY src ./src
-# Frontend sources (Vite project). The frontend-maven-plugin builds these during
-# `mvn package` and emits the bundle into src/main/webapp/assets/app.
-COPY frontend ./frontend
 RUN mvn package -DskipTests
 
 # Stage 2: Run

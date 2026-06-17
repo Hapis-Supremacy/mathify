@@ -58,7 +58,6 @@
           <proc>none</proc>
         </configuration>
       </plugin>
-
     </plugins>
   </build>
 </project>
