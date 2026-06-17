@@ -1,9 +1,11 @@
 package com.mathify.rest;
 
 import com.mathify.dao.CourseDAO;
+import com.mathify.model.AuthUser;
 import com.mathify.model.Course;
 import com.mathify.model.CourseCardView;
 import com.mathify.rest.dto.response.CourseNode;
+import com.mathify.rest.dto.response.EnrollmentResponse;
 import com.mathify.rest.dto.response.ErrorResponse;
 import com.mathify.rest.dto.response.LearningPathResponse;
 import com.mathify.rest.dto.response.PrereqEdgeResponse;
@@ -11,16 +13,17 @@ import com.mathify.rest.dto.response.PrereqGraphResponse;
 import com.mathify.service.CourseService;
 import com.mathify.rest.filter.Secured;
 import jakarta.inject.Inject;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 import com.mathify.dao.ChapterDAO;
-import com.mathify.dao.CourseDAO;
 import com.mathify.model.Chapter;
 import com.mathify.rest.dto.request.ChapterInput;
 import com.mathify.rest.dto.request.CourseInput;
@@ -96,6 +99,40 @@ public class CourseResource {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
         return Response.ok(course).build();
+    }
+
+    /**
+     * Enrolls the current student in {@code id}. Powers the "Enroll" button on
+     * the All Courses page.
+     *
+     * <pre>
+     *   POST /api/courses/{id}/enroll
+     *     -> 201 { courseId, status: "NOT_STARTED", lastAccessedAt: null, progressPercent: 0 }
+     * </pre>
+     *
+     * {@code 401} when unauthenticated, {@code 404} when the course does not
+     * exist, {@code 409} when already enrolled (the client treats that as success).
+     */
+    @POST
+    @Path("/{id}/enroll")
+    @Secured
+    public Response enroll(@PathParam("id") String id, @Context HttpServletRequest request) {
+        AuthUser user = Sessions.currentUser(request);
+        if (user == null) {
+            return Response.status(Response.Status.UNAUTHORIZED)
+                    .entity(new ErrorResponse("unauthenticated", null)).build();
+        }
+        if (courseService.getCourse(id) == null) {
+            return Response.status(Response.Status.NOT_FOUND)
+                    .entity(new ErrorResponse("course_not_found", null)).build();
+        }
+        if (courseService.isEnrolled(user.uid(), id)) {
+            return Response.status(Response.Status.CONFLICT)
+                    .entity(new ErrorResponse("already_enrolled", null)).build();
+        }
+        courseService.enroll(user.uid(), id);
+        EnrollmentResponse body = new EnrollmentResponse(id, "NOT_STARTED", null, 0);
+        return Response.status(Response.Status.CREATED).entity(body).build();
     }
 
     // --- Admin Course Endpoints ---

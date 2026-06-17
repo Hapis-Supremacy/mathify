@@ -1,6 +1,7 @@
 package com.mathify.service;
 
 import com.mathify.dao.CourseDAO;
+import com.mathify.dao.CourseEnrollmentDAO;
 import com.mathify.model.Course;
 import com.mathify.model.CourseCardView;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -13,6 +14,9 @@ public class CourseService {
 
     @Inject
     private CourseDAO courseDAO;
+
+    @Inject
+    private CourseEnrollmentDAO enrollmentDAO;
 
     public List<CourseCardView> getAllCourses() {
         try {
@@ -43,6 +47,25 @@ public class CourseService {
     public List<CourseCardView> getPrerequisitePath(String courseId) {
         try {
             return courseDAO.findPrerequisitePath(courseId);
+        } catch (SQLException e) {
+            throw new RuntimeException("DB error", e);
+        }
+    }
+
+    /** Whether {@code uid} is already enrolled in {@code courseId}. */
+    public boolean isEnrolled(String uid, String courseId) {
+        try {
+            return enrollmentDAO.find(uid, courseId) != null;
+        } catch (SQLException e) {
+            throw new RuntimeException("DB error", e);
+        }
+    }
+
+    /** Enrolls {@code uid} in {@code courseId}. Caller is responsible for the
+     *  existence / duplicate checks; the DAO is a no-op if already enrolled. */
+    public void enroll(String uid, String courseId) {
+        try {
+            enrollmentDAO.enroll(uid, courseId);
         } catch (SQLException e) {
             throw new RuntimeException("DB error", e);
         }
