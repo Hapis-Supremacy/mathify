@@ -19,8 +19,21 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
+import com.mathify.dao.ChapterDAO;
+import com.mathify.dao.CourseDAO;
+import com.mathify.model.Chapter;
+import com.mathify.rest.dto.request.ChapterInput;
+import com.mathify.rest.dto.request.CourseInput;
+import com.mathify.rest.filter.AdminSecured;
+import jakarta.validation.Valid;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Path("/courses")
 @Produces(MediaType.APPLICATION_JSON)
@@ -28,6 +41,12 @@ public class CourseResource {
 
     @Inject
     private CourseService courseService;
+
+    @Inject
+    private CourseDAO courseDAO;
+
+    @Inject
+    private ChapterDAO chapterDAO;
 
     @GET
     public List<CourseCardView> getAllCourses() {
@@ -77,6 +96,131 @@ public class CourseResource {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
         return Response.ok(course).build();
+    }
+
+    // --- Admin Course Endpoints ---
+
+    @POST
+    @AdminSecured
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response createCourse(@Valid CourseInput input) {
+        String courseId = UUID.randomUUID().toString();
+        Course course = new Course();
+        course.setCourseId(courseId);
+        course.setTitle(input.title());
+        course.setDescription(input.description());
+        course.setCategory(input.category());
+        
+        List<Course> prereqs = new ArrayList<>();
+        if (input.prerequisite() != null) {
+            for (String p : input.prerequisite()) {
+                Course pr = new Course();
+                pr.setCourseId(p);
+                prereqs.add(pr);
+            }
+        }
+        course.setPrerequisite(prereqs);
+        course.setChapters(new ArrayList<>());
+        
+        try {
+            courseDAO.insert(course);
+            Course created = courseDAO.findCourse(courseId);
+            return Response.status(Response.Status.CREATED).entity(created).build();
+        } catch (SQLException e) {
+            throw new RuntimeException("DB error", e);
+        }
+    }
+
+    @PUT
+    @Path("/{id}")
+    @AdminSecured
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response updateCourse(@PathParam("id") String id, @Valid CourseInput input) {
+        try {
+            Course existing = courseDAO.findCourse(id);
+            if (existing == null) {
+                return Response.status(Response.Status.NOT_FOUND).build();
+            }
+            courseDAO.update(id, input.title(), input.description(), input.category());
+            // Prerequisite update is omitted for simplicity unless requested
+            Course updated = courseDAO.findCourse(id);
+            return Response.ok(updated).build();
+        } catch (SQLException e) {
+            throw new RuntimeException("DB error", e);
+        }
+    }
+
+    @DELETE
+    @Path("/{id}")
+    @AdminSecured
+    public Response deleteCourse(@PathParam("id") String id) {
+        try {
+            if (courseDAO.findCourse(id) == null) {
+                return Response.status(Response.Status.NOT_FOUND).build();
+            }
+            courseDAO.delete(id);
+            return Response.noContent().build();
+        } catch (SQLException e) {
+            throw new RuntimeException("DB error", e);
+        }
+    }
+
+    // --- Admin Chapter Endpoints ---
+
+    @POST
+    @Path("/{courseId}/chapters")
+    @AdminSecured
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response createChapter(@PathParam("courseId") String courseId, @Valid ChapterInput input) {
+        try {
+            if (courseDAO.findCourse(courseId) == null) {
+                return Response.status(Response.Status.NOT_FOUND).build();
+            }
+            String chapterId = UUID.randomUUID().toString();
+            Chapter chapter = new Chapter(chapterId, input.title(), "", 0);
+            chapter.setModules(new ArrayList<>());
+            chapter.setQuizzes(new ArrayList<>());
+            int order = input.order() != null ? input.order() : 0;
+            chapterDAO.insert(courseId, chapter, order);
+            
+            Chapter created = chapterDAO.findById(chapterId);
+            return Response.status(Response.Status.CREATED).entity(created).build();
+        } catch (SQLException e) {
+            throw new RuntimeException("DB error", e);
+        }
+    }
+
+    @PUT
+    @Path("/{courseId}/chapters/{chapterId}")
+    @AdminSecured
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response updateChapter(@PathParam("courseId") String courseId, @PathParam("chapterId") String chapterId, @Valid ChapterInput input) {
+        try {
+            Chapter existing = chapterDAO.findById(chapterId);
+            if (existing == null) {
+                return Response.status(Response.Status.NOT_FOUND).build();
+            }
+            chapterDAO.update(chapterId, input.title(), existing.getDescription(), existing.getXpReward());
+            // Assuming order update is handled or ignored for now
+            return Response.ok(chapterDAO.findById(chapterId)).build();
+        } catch (SQLException e) {
+            throw new RuntimeException("DB error", e);
+        }
+    }
+
+    @DELETE
+    @Path("/{courseId}/chapters/{chapterId}")
+    @AdminSecured
+    public Response deleteChapter(@PathParam("courseId") String courseId, @PathParam("chapterId") String chapterId) {
+        try {
+            if (chapterDAO.findById(chapterId) == null) {
+                return Response.status(Response.Status.NOT_FOUND).build();
+            }
+            chapterDAO.delete(chapterId);
+            return Response.noContent().build();
+        } catch (SQLException e) {
+            throw new RuntimeException("DB error", e);
+        }
     }
 
     private static List<CourseNode> toNodes(List<CourseCardView> courses) {

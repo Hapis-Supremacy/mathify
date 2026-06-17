@@ -11,7 +11,7 @@ public class MultipleChoiceQuestion implements Question {
     /**
      * Nested record — setiap pilihan punya id unik dan teks yang ditampilkan.
      */
-    public record Option(String id, String text) {
+    public record Option(String id, String text, Boolean correct) {
 
         public Option {
             if (id == null || id.isBlank()) {
@@ -20,6 +20,11 @@ public class MultipleChoiceQuestion implements Question {
             if (text == null || text.isBlank()) {
                 throw new IllegalArgumentException("Option text must not be blank");
             }
+        }
+        
+        // Constructor for when correct flag is not provided (student view)
+        public Option(String id, String text) {
+            this(id, text, null);
         }
     }
 
