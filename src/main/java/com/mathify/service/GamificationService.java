@@ -3,6 +3,7 @@ package com.mathify.service;
 import com.mathify.dao.AchievementDAO;
 import com.mathify.dao.UserAchievementDAO;
 import com.mathify.dao.UserProgressDAO;
+import com.mathify.model.Achievement;
 import com.mathify.model.UserProgress;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -21,10 +22,15 @@ public class GamificationService {
     @Inject
     private UserAchievementDAO userAchievementDAO;
 
+    @Inject
+    private NotificationService notificationService;
+
     @PostConstruct
     public void init() {
         try {
-            achievementDAO.seedCatalog();
+            if (achievementDAO.findAll().isEmpty()) {
+                achievementDAO.seedCatalog();
+            }
         } catch (SQLException e) {
             // Log error
             System.err.println("Failed to seed achievements: " + e.getMessage());
@@ -44,7 +50,7 @@ public class GamificationService {
             UserProgress up = userProgressDAO.findOrCreate(uid);
             up.decrementEnergy(1); // Cost 1 energy
             up.addXP(score); // XP = score
-            up.addLevel((up.getTotalXP() / 100) + 1 - up.getLevel()); // Simple level calculation
+            maybeLevelUp(uid, up);
             userProgressDAO.save(uid, up);
             evaluateAchievements(uid, up);
         } catch (SQLException e) {
@@ -52,11 +58,11 @@ public class GamificationService {
         }
     }
 
-    public void awardChapterXP(String uid) {
+    public void awardChapterXP(String uid, int xpReward) {
         try {
             UserProgress up = userProgressDAO.findOrCreate(uid);
-            up.addXP(10); // 10 XP for chapter complete
-            up.addLevel((up.getTotalXP() / 100) + 1 - up.getLevel());
+            up.addXP(xpReward);
+            maybeLevelUp(uid, up);
             userProgressDAO.save(uid, up);
             evaluateAchievements(uid, up);
         } catch (SQLException e) {
@@ -87,22 +93,47 @@ public class GamificationService {
     private void evaluateAchievements(String uid, UserProgress up) throws SQLException {
         if (!up.hasAchievement("first_steps") && !up.getCourseEnrollments().isEmpty()) {
             userAchievementDAO.award(uid, "first_steps");
-            up.completeAchievement(achievementDAO.findById("first_steps"));
+            Achievement achievement = achievementDAO.findById("first_steps");
+            if (achievement != null) {
+                up.completeAchievement(achievement);
+                notificationService.notifyAchievement(uid, achievement);
+            }
         }
         if (!up.hasAchievement("quiz_master")) {
             boolean perfect = up.getQuizAttempts().values().stream().anyMatch(q -> q.score() == 100);
             if (perfect) {
                 userAchievementDAO.award(uid, "quiz_master");
-                up.completeAchievement(achievementDAO.findById("quiz_master"));
+                Achievement achievement = achievementDAO.findById("quiz_master");
+                if (achievement != null) {
+                    up.completeAchievement(achievement);
+                    notificationService.notifyAchievement(uid, achievement);
+                }
             }
         }
         if (!up.hasAchievement("streak_3") && up.getCurrentStreak() >= 3) {
             userAchievementDAO.award(uid, "streak_3");
-            up.completeAchievement(achievementDAO.findById("streak_3"));
+            Achievement achievement = achievementDAO.findById("streak_3");
+            if (achievement != null) {
+                up.completeAchievement(achievement);
+                notificationService.notifyAchievement(uid, achievement);
+            }
         }
         if (!up.hasAchievement("high_achiever") && up.getTotalXP() >= 1000) {
             userAchievementDAO.award(uid, "high_achiever");
-            up.completeAchievement(achievementDAO.findById("high_achiever"));
+            Achievement achievement = achievementDAO.findById("high_achiever");
+            if (achievement != null) {
+                up.completeAchievement(achievement);
+                notificationService.notifyAchievement(uid, achievement);
+            }
+        }
+    }
+
+    private void maybeLevelUp(String uid, UserProgress up) {
+        int oldLevel = up.getLevel();
+        int newLevel = (up.getTotalXP() / 500) + 1;
+        if (newLevel > oldLevel) {
+            up.addLevel(newLevel - oldLevel);
+            notificationService.notifyLevelUp(uid, newLevel);
         }
     }
 }
