@@ -5,6 +5,8 @@ import com.mathify.model.Achievement;
 import com.mathify.model.NotificationType;
 import com.mathify.model.Plan;
 
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,6 +22,7 @@ import java.sql.SQLException;
  * (awarding XP, granting premium). This mirrors the app's "log but don't abort"
  * style used at startup.
  */
+@ApplicationScoped
 public class NotificationService {
 
     private static final Logger log = LoggerFactory.getLogger(NotificationService.class);
@@ -27,7 +30,8 @@ public class NotificationService {
     /** Where a notification points when clicked — the student dashboard for all kinds today. */
     private static final String DASHBOARD_LINK = "/dashboard";
 
-    private final NotificationDAO dao = new NotificationDAO();
+    @Inject
+    private NotificationDAO dao;
 
     /** A new achievement was earned. */
     public void notifyAchievement(String uid, Achievement achievement) {

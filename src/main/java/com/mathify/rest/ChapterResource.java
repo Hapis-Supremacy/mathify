@@ -93,7 +93,7 @@ public class ChapterResource {
             com.mathify.model.ChapterProgress progress = new com.mathify.model.ChapterProgress(chapterId, java.time.LocalDateTime.now(), Duration.ofSeconds(seconds));
             chapterProgressDAO.save(user.uid(), progress);
             
-            gamificationService.awardChapterXP(user.uid());
+            gamificationService.awardChapterXP(user.uid(), chapter.getXpReward());
             gamificationService.updateStreak(user.uid());
             
             return Response.ok().build();

@@ -98,4 +98,36 @@ public class UserProgressTest {
         assertEquals(1, progress.getQuizAttempts().size());
         assertEquals(attempt, progress.getQuizAttempt("quiz-1"));
     }
+
+    @Test
+    public void testAchievementsLogic() {
+        // Test default constructor
+        Achievement a1 = new Achievement();
+        assertNull(a1.getId());
+        
+        a1.setId("first_steps");
+        a1.setTitle("First Steps");
+        a1.setCategory("Learning");
+        a1.setRequirement("Enroll in your first course");
+        
+        assertEquals("first_steps", a1.getId());
+        assertEquals("First Steps", a1.getTitle());
+        assertEquals("Learning", a1.getCategory());
+        assertEquals("Enroll in your first course", a1.getRequirement());
+        
+        // Test full constructor
+        Achievement a2 = new Achievement("first_steps", "First Steps", "Learning", "Enroll in your first course");
+        assertEquals(a1, a2);
+        assertEquals(a1.hashCode(), a2.hashCode());
+        assertTrue(a1.toString().contains("first_steps"));
+        
+        // Test complete/has achievement
+        UserProgress progress = new UserProgress("test-user-achievement");
+        assertFalse(progress.hasAchievement("first_steps"));
+        
+        progress.completeAchievement(a1);
+        assertTrue(progress.hasAchievement("first_steps"));
+        assertEquals(1, progress.getAchievements().size());
+        assertEquals(a1, progress.getAchievements().get(0).getKey());
+    }
 }

@@ -6,6 +6,9 @@ public class Achievement {
     private String category;
     private String requirement;
 
+    public Achievement() {
+    }
+
     //Constructor
     public Achievement(String achievementId, String title, String category, String requirement) {
         this.achievementId = achievementId;
